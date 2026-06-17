@@ -84,3 +84,33 @@ describe Sheen::ANSI::Style do
     end
   end
 end
+
+describe "#strip" do
+  it "returns plain strings unchanged" do
+    Sheen::ANSI.strip("hello").should eq("hello")
+  end
+
+  it "removes SGR sequences" do
+    Sheen::ANSI.strip("\e[1;31mred\e[0m").should eq("red")
+  end
+
+  it "removes OSC hyperlink sequences" do
+    Sheen::ANSI.strip("\e]8;;https://example.com\e\\click\e]8;;\e\\").should eq("click")
+  end
+
+  it "removes OSC terminated by BEL" do
+    Sheen::ANSI.strip("\e]0;title\atext").should eq("text")
+  end
+
+  it "removes two-byte ESX sequences" do
+    Sheen::ANSI.strip("a\eMb").should eq("ab")
+  end
+
+  it "handless strings with no esxapes and unicode content" do
+    Sheen::ANSI.strip("héllo 世界 🎉").should eq("héllo 世界 🎉")
+  end
+
+  it "strips back to back sequences without gobbling printable text between" do
+    Sheen::ANSI.strip("\e[1ma\e[0mb\e[31mc").should eq("abc")
+  end
+end

@@ -1,7 +1,22 @@
 module Sheen
   module ANSI
+    # Control Sequence Introducer
     CSI         = "\e["
     RESET_STYLE = "\e[0m"
+    # Matches a single ANSI escape sequence: CSI, OSC (Operating System Command) with BEL (Bell) or ST (String Terminator), or two byte ESC.
+    # No need for full parsing here, a regex is sufficient for stripping these.
+    ESCAPE_PATTERN = /
+      \e\[ [\x30-\x3F]* [\x20-\x2F]* [\x40-\x7E]  # CSI
+      |
+      \e\] .*? (?: \x07 | \e\\ )                  # OSC (terminated by BEL or ST)
+      |
+      \e [\x20-\x7E]                              # other two-byte ESC
+    /x
+
+    # Strips all ANSI escape sequences from *string*, leaving only printable content.
+    def self.strip(string : String) : String
+      string.gsub(ESCAPE_PATTERN, "")
+    end
 
     # Build a Select Graphic Rendition (SGR) escape sequence by accumulating parameters.
     # Mutating is chainable, each method appends and returns self.
