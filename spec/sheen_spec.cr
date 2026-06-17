@@ -114,3 +114,33 @@ describe "#strip" do
     Sheen::ANSI.strip("\e[1ma\e[0mb\e[31mc").should eq("abc")
   end
 end
+
+alias SAU = Sheen::ANSI::Underline
+describe Sheen::ANSI::Underline do
+  it "maps each variant to its SGR sub-parameter index" do
+    SAU::None.value.should eq(0)
+    SAU::Single.value.should eq(1)
+    SAU::Double.value.should eq(2)
+    SAU::Curly.value.should eq(3)
+    SAU::Dotted.value.should eq(4)
+    SAU::Dashed.value.should eq(5)
+  end
+end
+
+describe "Sheen::ANSI::Style#underline_style" do
+  it "encodes a curly underline as 4:3" do
+    SAS.new.underline_style(SAU::Curly).to_s.should eq("\e[4:3m")
+  end
+
+  it "combines with other attributes using ';'" do
+    SAS.new
+      .bold
+      .underline_style(SAU::Dashed)
+      .to_s
+      .should eq("\e[1;4:5m")
+  end
+
+  it "leaves the plain #underline method emitting a bare 4" do
+    SAS.new.underline.to_s.should eq("\e[4m")
+  end
+end

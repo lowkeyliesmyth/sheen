@@ -13,6 +13,17 @@ module Sheen
       \e [\x20-\x7E]                              # other two-byte ESC
     /x
 
+    # SGR underline styles. Sub-styles use the subparameter of SGR 4 (eg "4:3" for curly).
+    # Reset via SGR 24 covers all substyles.
+    enum Underline
+      None   = 0
+      Single = 1
+      Double = 2
+      Curly  = 3
+      Dotted = 4
+      Dashed = 5
+    end
+
     # Strips all ANSI escape sequences from *string*, leaving only printable content.
     def self.strip(string : String) : String
       string.gsub(ESCAPE_PATTERN, "")
@@ -43,6 +54,11 @@ module Sheen
 
       def underline : self
         @params << "4"
+        self
+      end
+
+      def underline_style(style : Underline) : self
+        @params << "4:#{style.value}"
         self
       end
 
