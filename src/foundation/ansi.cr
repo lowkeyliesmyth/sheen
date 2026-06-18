@@ -31,18 +31,22 @@ module Foundation
     "\e]8;#{param_str};#{url}\e\\"
   end
 
-  # SGR level color values
-
-  record BasicColor, index : UInt8                 # 0..15 -> 30-37/90-97, 40-47/100-107
-  record IndexedColor, index : UInt8               # 0..255 -> 38;5;n / 48;5;n
+  # SGR basic color: index 0..15
+  record BasicColor, index : UInt8 # 0..15 -> 30-37/90-97, 40-47/100-107
+  # SGR 256-color palette index: 0..255
+  record IndexedColor, index : UInt8 # 0..255 -> 38;5;n / 48;5;n
+  # SGR truecolor value
   record RGBColor, r : UInt8, g : UInt8, b : UInt8 # -> 38;2;r;g;b / 48;2;r;g;b
 
-  struct DefaultColor # 39 / 49
+  # The terminal default fg/bg (SGR 39 / 49)
+  struct DefaultColor
   end
 
+  # Any SGR level color a parsed sequence can carry
   alias SGRColor = BasicColor | IndexedColor | RGBColor | DefaultColor
 
   @[Flags]
+  # Bool SGR text attributes, stored as a bitset
   enum SGRFlags
     Bold
     Faint
@@ -63,7 +67,7 @@ module Foundation
     reset : Bool = false,
     unknown : Array(String) = [] of String do
     # Serializes the attributes to an SGR escape sequence and writes it to *io*.
-    # Applies accumulated state in order: reset (if set), then bold, faint, italic, blink, reverse, and strikethrough flags, followed by underline style, fg color, bg color, and any unrecognized parameters verbatim.
+    # Applies accumulated state in order.
     #
     # Round-trip is semantically accurate, not byte-accurate.
     def to_s(io : IO) : Nil # ameba:disable Metrics/CyclomaticComplexity
@@ -186,6 +190,7 @@ module Foundation
   end
 
   # Reads an extended color introducer (`38`/`48`) and its sub-parameters.
+  #
   # Returns the color plus how many tokens it spans, or `nil` if malformed.
   private def self.consume_extended_color(tokens : Array(String), i : Int32) : Tuple(SGRColor, Int32)?
     case tokens[i + 1]?
@@ -202,7 +207,7 @@ module Foundation
     end
   end
 
-  # Maps a basic SGR color *code* to its *SGRColor* index and *Bool* whether it is foreground or not.
+  # Maps a basic SGR color *code* to its returned *SGRColor* index and *Bool* of whether it is foreground or not.
   private def self.basic_color(code : Int32) : Tuple(SGRColor, Bool)?
     case code
     when 30..37
