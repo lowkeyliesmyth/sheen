@@ -1,4 +1,4 @@
-require "./sheen/ansi"
+require "./foundation"
 
 module Sheen
   VERSION = "0.1.0"
