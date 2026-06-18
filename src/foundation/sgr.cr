@@ -112,6 +112,12 @@ module Foundation
       self
     end
 
+    # Appends a raw SGR parameter as-is, for params that the typed setters don't model.
+    def raw(param : String) : self
+      @params << param
+      self
+    end
+
     def reset : self
       @params << "0"
       self
