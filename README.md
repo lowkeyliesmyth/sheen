@@ -26,6 +26,17 @@ TODO: Write usage instructions here
 
 TODO: Write development instructions here
 
+### Updating Unicode data
+
+`data/unicode/EastAsianWidth.txt` is the vendored Unicode Character Database source for terminal-width measurement. Sheen uses the generated `src/foundation/unicode/east_asian_width.cr` and not downloaded data file.
+
+To bump the supported Unicode version:
+
+1. Update the `UNICODE_VERSION` constant in `scripts/gen_unicode.cr`.
+2. Run `task unicode` to download the updated data file and generate the `east_asian_width.cr` table 
+3. Commit both the refreshed data source and the updated lookup table + query method.
+
+
 ## Contributing
 
 1. Fork it (<https://github.com/lowkeyliesmyth/sheen/fork>)

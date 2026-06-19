@@ -22,6 +22,11 @@ tasks:
     cmds:
       - actionlint
 
+  unicode:
+    desc: Download and generate unicode tables
+    cmds:
+      - crystal run scripts/gen_unicode.cr
+
   default:
     desc: Run default spec-lint checks
     deps: [spec, lint]
