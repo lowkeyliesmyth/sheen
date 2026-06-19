@@ -12,7 +12,7 @@ describe Foundation::Underline do
 end
 
 describe Foundation::Style do
-  it "renders emty string when no params are set" do
+  it "renders empty string when no params are set" do
     Foundation::Style.new.to_s.should eq("")
   end
 

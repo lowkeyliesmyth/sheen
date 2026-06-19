@@ -102,7 +102,7 @@ module Foundation
       when IndexedColor
         foreground ? style.foreground_indexed(color.index) : style.background_indexed(color.index)
       when RGBColor
-        foreground ? style.coreground_rgb(color.r, color.g, color.b) : style.background_rgb(color.r, color.g, color.b)
+        foreground ? style.foreground_rgb(color.r, color.g, color.b) : style.background_rgb(color.r, color.g, color.b)
       when DefaultColor
         foreground ? style.default_foreground : style.default_background
       end
@@ -144,7 +144,7 @@ module Foundation
         when "5"  then flags |= SGRFlags::Blink
         when "7"  then flags |= SGRFlags::Reverse
         when "9"  then flags |= SGRFlags::Strikethrough
-        when "22" then flags &= ~(SGRFlags::Bold | SGRFlags::Faint)
+        when "22" then flags &= ~(SGRFlags::Bold | SGRFlags::Faint) # Bitwise AND assignment and NOT operator
         when "23" then flags &= ~SGRFlags::Italic
         when "24" then underline = nil
         when "25" then flags &= ~SGRFlags::Blink
@@ -167,7 +167,7 @@ module Foundation
         else
           if tok == "4"
             underline = Underline::Single
-            f tok.starts_with?("4:")
+          elsif tok.starts_with?("4:")
             sub = tok[2..].to_i?
             u = sub ? Underline.from_value?(sub) : nil
             if u
@@ -201,7 +201,7 @@ module Foundation
     when "2"
       r = tokens[i + 2]?.try(&.to_u8?)
       g = tokens[i + 3]?.try(&.to_u8?)
-      b = tokens[i + 4]?.try?(&.to_u8?)
+      b = tokens[i + 4]?.try(&.to_u8?)
       return nil unless r && g && b
       {RGBColor.new(r, g, b).as(SGRColor), 5}
     end
@@ -213,11 +213,11 @@ module Foundation
     when 30..37
       {BasicColor.new((code - 30).to_u8).as(SGRColor), true}
     when 90..97
-      {BasicColor.new((code - 90).to_u8).as(SGRColor), true}
+      {BasicColor.new((code - 90 + 8).to_u8).as(SGRColor), true}
     when 40..47
       {BasicColor.new((code - 40).to_u8).as(SGRColor), false}
     when 100..107
-      {BasicColor.new((code - 100 + 8).to_u8).as(SRGColor), false}
+      {BasicColor.new((code - 100 + 8).to_u8).as(SGRColor), false}
     end
   end
 end
