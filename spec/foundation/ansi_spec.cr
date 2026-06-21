@@ -192,3 +192,51 @@ describe "Attributes round-trip" do
     Foundation.parse_sgr("\e[1;1m").to_s.should eq("\e[1m")
   end
 end
+
+describe "#each_segment" do
+  it "splits text and SGR sequences in order" do
+    segs = [] of {Foundation::SegmentKind, String}
+    Foundation.each_segment("\e[1mhi\e[0m") { |kind, content| segs << {kind, content} }
+    segs.should eq([
+      {Foundation::SegmentKind::Sgr, "\e[1m"},
+      {Foundation::SegmentKind::Text, "hi"},
+      {Foundation::SegmentKind::Sgr, "\e[0m"},
+    ])
+  end
+
+  it "classifies an OSC hyperlink as Osc" do
+    kinds = [] of Foundation::SegmentKind
+    Foundation.each_segment("\e]8;;http://example.com\e\\link\e]8;;\e\\") { |kind, _c| kinds << kind }
+    kinds.should eq([
+      Foundation::SegmentKind::Osc,
+      Foundation::SegmentKind::Text,
+      Foundation::SegmentKind::Osc,
+    ])
+  end
+
+  it "classifies a non-SGR CSI sequence as Escape" do
+    kinds = [] of Foundation::SegmentKind
+    Foundation.each_segment("\e[2Jtext") { |kind, _c| kinds << kind }
+    kinds.first.should eq(Foundation::SegmentKind::Escape)
+  end
+
+  it "yields a single text segment for plain context" do
+    segs = [] of {Foundation::SegmentKind, String}
+    Foundation.each_segment("hello") { |kind, content| segs << {kind, content} }
+    segs.should eq([{Foundation::SegmentKind::Text, "hello"}])
+  end
+
+  it "yields nothing for an empty string" do
+    count = 0
+    Foundation.each_segment("") { |_k, _c| count += 1 }
+    count.should eq(0)
+  end
+
+  it "reconstructs the original string from segment contents" do
+    original = "\e[1mhi\e]8;;http://example.com\e\\link\e]8;;\e\\\e[0m世"
+    rebuilt = String.build do |io|
+      Foundation.each_segment(original) { |_k, content| io << content }
+    end
+    rebuilt.should eq(original)
+  end
+end

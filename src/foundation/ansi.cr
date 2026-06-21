@@ -220,4 +220,38 @@ module Foundation
       {BasicColor.new((code - 100 + 8).to_u8).as(SGRColor), false}
     end
   end
+
+  # The classification of a segment yielded by the `each_segment` method
+  enum SegmentKind
+    Text   # printable content of zero or more graphemes
+    Sgr    # an SGR sequence (`\e[...m`)
+    Osc    # an OSC sequence, eg an OSC8 hyperlink
+    Escape # any other escape sequence
+  end
+
+  # Splits *string* into ordered segments, yielding `kind, content` for each segment.
+  # Text and various escape sequences are separated so callers can measure or slice visible content while preserving and tracking embedded ANSI.
+  def self.each_segment(string : String, & : SegmentKind, String ->) : Nil
+    last = 0
+    string.scan(ESCAPE_PATTERN) do |mtch|
+      s = mtch.begin
+      e = mtch.end
+      yield SegmentKind::Text, string[last...s] if s > last
+      seq = string[s...e]
+      yield classify_escape(seq), seq
+      last = e
+    end
+    yield SegmentKind::Text, string[last..] if last < string.size
+  end
+
+  # Classifies a complete escape *sequence* as SGR, OSC, or a generic escape kind.
+  private def self.classify_escape(seq : String) : SegmentKind
+    if seq.starts_with?("\e[")
+      seq.ends_with?('m') ? SegmentKind::Sgr : SegmentKind::Escape
+    elsif seq.starts_with?("\e]")
+      SegmentKind::Osc
+    else
+      SegmentKind::Escape
+    end
+  end
 end
