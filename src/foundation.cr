@@ -1,5 +1,6 @@
 require "./foundation/ansi"
 require "./foundation/color_space"
+require "./foundation/palette"
 require "./foundation/sgr"
 require "./foundation/unicode/east_asian_width"
 require "./foundation/width"
