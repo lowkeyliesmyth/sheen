@@ -20,7 +20,7 @@ module Foundation
     # The six color cube levels
     CUBE_LEVELS = {0_u8, 95_u8, 135_u8, 175_u8, 215_u8, 255_u8}
 
-    # All 256 palette colors index 0-255.
+    # All 256 palette colors index 0-255 in an array.
     ANSI256 = begin
       colors = Array(RGB).new(256)
       colors.concat(BASE_16)

@@ -71,4 +71,38 @@ describe Foundation::Profile do
       Foundation::Profile.detect(tty, env).should eq(Foundation::Profile::TrueColor)
     end
   end
+
+  describe "#downsample" do
+    it "keeps the RGB for TrueColor" do
+      rgb = Foundation::RGB.parse("#7D56F4")
+      Foundation.downsample(rgb, Foundation::Profile::TrueColor).should eq(Foundation::RGBColor.new(0x7D_u8, 0x56_u8, 0xF4_u8))
+    end
+
+    it "maps to the nearest 256-palette index" do
+      Foundation.downsample(Foundation::RGB.parse("#FF0000"), Foundation::Profile::ANSI256).should eq(Foundation::IndexedColor.new(196_u8))
+      Foundation.downsample(Foundation::RGB.parse("#FFFFFF"), Foundation::Profile::ANSI256).should eq(Foundation::IndexedColor.new(231_u8))
+    end
+
+    it "never picks a terminal-dependent base color for ANSI256" do
+      idx = Foundation.downsample(Foundation::RGB.parse("#FF0000"), Foundation::Profile::ANSI256).as(Foundation::IndexedColor).index
+      (idx >= 16).should be_true
+    end
+
+    it "maps to the nearest of the 16 base colors for ANSI" do
+      Foundation.downsample(Foundation::RGB.parse("#FF0000"), Foundation::Profile::ANSI).should eq(Foundation::BasicColor.new(9_u8))
+      Foundation.downsample(Foundation::RGB.parse("#000000"), Foundation::Profile::ANSI).should eq(Foundation::BasicColor.new(0_u8))
+    end
+
+    it "returns nil (no color) for Ascii and NoTTY" do
+      red = Foundation::RGB.parse("#FF0000")
+      Foundation.downsample(red, Foundation::Profile::Ascii).should be_nil
+      Foundation.downsample(red, Foundation::Profile::NoTTY).should be_nil
+    end
+
+    it "coerces a near-red to actual pure red in both reduced profiles" do
+      near = Foundation::RGB.parse("#FE0101")
+      Foundation.downsample(near, Foundation::Profile::ANSI256).should eq(Foundation::IndexedColor.new(196_u8))
+      Foundation.downsample(near, Foundation::Profile::ANSI).should eq(Foundation::BasicColor.new(9_u8))
+    end
+  end
 end

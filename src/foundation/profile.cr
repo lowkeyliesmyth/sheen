@@ -1,3 +1,7 @@
+require "./ansi"
+require "./color_space"
+require "./palette"
+
 module Foundation
   # The color capability of an output, from least to most capable. Mirrors termenv detection path from termenv.
   enum Profile
@@ -78,5 +82,42 @@ module Foundation
       end
       false
     end
+  end
+
+  # Precomputed CIELAB for each palette color, so downsampling converts only the input color on every call and not the whole palette.
+  private ANSI256_LAB = Palette::ANSI256.map(&.to_lab)
+  private BASE_16_LAB = Palette::BASE_16.map(&.to_lab)
+
+  # Returns the best SGR color for *rgb* at *profile*, or nil if the profile has no color.
+  # Nearest color is found by CIELAB ΔE76 distance.
+  def self.downsample(rgb : RGB, profile : Profile) : SGRColor?
+    case profile
+    when .true_color?
+      RGBColor.new(rgb.r, rgb.g, rgb.b)
+    when .ansi256?
+      # Skip the terminal- and theme-dependent nonstandardized base colors (indices 0-15) so we don't operate on bad assumptions.
+      IndexedColor.new(nearest(rgb, ANSI256_LAB, 16, 256))
+    when .ansi?
+      BasicColor.new(nearest(rgb, BASE_16_LAB, 0, 16))
+    else
+      nil
+    end
+  end
+
+  # Returns the index of the entry in *labs* within [start, finish) that is closest to *rgb* by ΔE76 distance.
+  #
+  # *start* (inclusive start) and *finish* (exclusive end) are the indices into both *labs* and the SGR palette.
+  private def self.nearest(rgb : RGB, labs : Array(Lab), start : Int32, finish : Int32) : UInt8
+    target = rgb.to_lab
+    best = start
+    best_distance = Float64::INFINITY
+    (start...finish).each do |i|
+      distance = target.distance(labs[i])
+      if distance < best_distance
+        best_distance = distance
+        best = i
+      end
+    end
+    best.to_u8
   end
 end
