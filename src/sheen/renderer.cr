@@ -1,7 +1,7 @@
 require "../foundation"
 
 module Sheen
-  # Terminal renderer holding the oclor profile and background darkness used to resolve and downsample colors at render time. Inspired by lipglossv1's Renderer.
+  # Terminal renderer holding the color profile and background darkness used to resolve and downsample colors at render time. Inspired by lipglossv1's Renderer.
   class Renderer
     # The output the profile is detected from and that rendering targets.
     property output : IO
