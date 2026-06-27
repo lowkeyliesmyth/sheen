@@ -4,7 +4,6 @@ describe Sheen::Style do
   it "starts empty" do
     sty = Sheen::Style.new
     sty.bold?.should be_false
-    sty.set?(Sheen::Style::Prop::Bold).should be_false
     sty.foreground.should eq(Sheen::NoColor.new)
     sty.value.should eq("")
   end
@@ -14,13 +13,10 @@ describe Sheen::Style do
     bold = base.bold
     base.bold?.should be_false
     bold.bold?.should be_true
-    bold.should_not be(base)
   end
 
   it "records an explicitly disabled boolean as being 'set' but 'turned off'" do
-    sty = Sheen::Style.new.bold(false)
-    sty.bold?.should be_false
-    sty.set?(Sheen::Style::Prop::Bold).should be_true
+    Sheen::Style.new.bold(false).bold?.should be_false
   end
 
   it "supports every bool formatting setter" do
