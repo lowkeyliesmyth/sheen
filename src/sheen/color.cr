@@ -3,20 +3,22 @@ require "./renderer"
 
 module Sheen
   # A color that resolves to a concrete SGR color through a renderer's profile
-  abstract struct TerminalColor
+  abstract class TerminalColor
     # Resolves to the SGR color for *renderer*'s profile, or nil for no color
     abstract def resolve(renderer : Renderer) : Foundation::SGRColor?
   end
 
   # The absence of color: default foreground, no background
-  struct NoColor < TerminalColor
+  class NoColor < TerminalColor
     def resolve(renderer : Renderer) : Foundation::SGRColor?
       nil
     end
+
+    def_equals_and_hash
   end
 
   # A color from a hex string (eg `#FF0000`) or ANSI256 index string (eg `63`).
-  struct Color < TerminalColor
+  class Color < TerminalColor
     getter value : String
 
     def initialize(@value : String)
@@ -25,10 +27,12 @@ module Sheen
     def resolve(renderer : Renderer) : Foundation::SGRColor?
       Sheen.resolve_value(@value, renderer.color_profile)
     end
+
+    def_equals_and_hash @value
   end
 
   # A color given by ANSI/256 index (0...255). Extra sugar over `Color`.
-  struct ANSIColor < TerminalColor
+  class ANSIColor < TerminalColor
     getter index : Int32
 
     def initialize(@index : Int32)
@@ -37,10 +41,12 @@ module Sheen
     def resolve(renderer : Renderer) : Foundation::SGRColor?
       Sheen.resolve_value(@index.to_s, renderer.color_profile)
     end
+
+    def_equals_and_hash @index
   end
 
   # A light+dark pair. The renderer's background darkness selects which one gets applied.
-  struct AdaptiveColor < TerminalColor
+  class AdaptiveColor < TerminalColor
     getter light : String
     getter dark : String
 
@@ -51,10 +57,12 @@ module Sheen
       value = renderer.has_dark_background? ? @dark : @light
       Sheen.resolve_value(value, renderer.color_profile)
     end
+
+    def_equals_and_hash @light, @dark
   end
 
   # Explicitly defined values per profile, with no automatic degradation between them. Each profile uses its own value as defined, and controls exactly how the color appears at every level of terminal support.
-  struct CompleteColor < TerminalColor
+  class CompleteColor < TerminalColor
     # The value used for truecolor 24-bit profiles.
     getter true_color : String
     # The value used for the ANSI256 profile.
@@ -75,10 +83,12 @@ module Sheen
               end
       Sheen.resolve_value(value, profile)
     end
+
+    def_equals_and_hash @true_color, @ansi256, @ansi
   end
 
   # A light+dark pair of `CompleteColor`'s, selected by background darkness.
-  struct CompleteAdaptiveColor < TerminalColor
+  class CompleteAdaptiveColor < TerminalColor
     getter light : CompleteColor
     getter dark : CompleteColor
 
@@ -88,6 +98,8 @@ module Sheen
     def resolve(renderer : Renderer) : Foundation::SGRColor?
       (renderer.has_dark_background? ? @dark : @light).resolve(renderer)
     end
+
+    def_equals_and_hash @light, @dark
   end
 
   # Builds a `TerminalColor` from a hex string, an index string, an integer index, or an existing color returned as-is.
