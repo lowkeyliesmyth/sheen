@@ -102,6 +102,34 @@ module Sheen
       dup.tap &.assign_value(values.join(' '))
     end
 
+    # Renders *strings* through this style's rules, each line is styled independently:
+    # - joined by a space
+    # - prefixed with any bound `#string` content
+    # - wrapped in SGR sequences assembled from current properties
+    # - with colors resolved and downsampled through the attached renderer's profile
+    # - width and heigh truncation is applied last
+    def render(*strings : String) : String
+      render_parts(strings.to_a)
+    end
+
+    # Renders the bound `#string` content.
+    def to_s(io : IO) : Nil
+      io << render_parts([] of String)
+    end
+
+    # Shared render path: prepends bound content, joins, styles, and limits.
+    private def render_parts(strings : Array(String)) : String
+      parts = strings.dup
+      parts.unshift(@value) unless @value.empty?
+      content = parts.join(' ')
+
+      # No rules set, return the content as-is.
+      return content if @props == Prop::None
+
+      content = apply_sequence(sgr_sequence, content)
+      limit_height(limit_width(content))
+    end
+
     # Returns the renderer this style is bound to.
     def renderer : Renderer
       @renderer
@@ -208,6 +236,73 @@ module Sheen
     # Sets *r* as the renderer this style is bound to.
     protected def assign_renderer(r : Renderer) : Nil
       @renderer = r
+    end
+
+    # Builds the opening SGR sequence for this style's rules, or "" if none emit.
+    private def sgr_sequence : String
+      builder = Foundation::Style.new
+      builder.bold if bold?
+      builder.faint if faint?
+      builder.italic if italic?
+      builder.underline if underline?
+      builder.reverse if reverse?
+      builder.blink if blink?
+      builder.strikethrough if strikethrough?
+
+      if fg = resolve_color(@foreground)
+        apply_color(builder, fg, foreground: true)
+      end
+      if bg = resolve_color(@background)
+        apply_color(builder, bg, foreground: false)
+      end
+
+      builder.to_s
+    end
+
+    # Resolves *color* to a concrete SGR color via the bound renderer, or nil.
+    private def resolve_color(color : TerminalColor?) : Foundation::SGRColor?
+      color.try &.resolve(@renderer)
+    end
+
+    # Applies an already-resolved SGR *color& to *builder* as fg or bg.
+    private def apply_color(builder : Foundation::Style, color : Foundation::SGRColor, *, foreground : Bool) : Nil
+      case color
+      in Foundation::BasicColor
+        foreground ? builder.foreground_basic(color.index) : builder.background_basic(color.index)
+      in Foundation::IndexedColor
+        foreground ? builder.foreground_indexed(color.index) : builder.background_indexed(color.index)
+      in Foundation::RGBColor
+        foreground ? builder.foreground_rgb(color.r, color.g, color.b) : builder.background_rgb(color.r, color.g, color.b)
+      in Foundation::DefaultColor
+        foreground ? builder.default_foreground : builder.default_background
+      end
+    end
+
+    # Wraps each line of *content* with *seq* and a reset, so styling resets at each newline.
+    #
+    # Returns content unchanged when *seq* is empty.
+    private def apply_sequence(seq : String, content : String) : String
+      return content if seq.empty?
+
+      String.build do |io|
+        lines = content.split('\n')
+        lines.each_with_index do |line, i|
+          io << seq << line << Foundation::RESET_STYLE
+          io << '\n' if i < lines.size - 1
+        end
+      end
+    end
+
+    # Truncates each line of *content* to `max_width` visible cells. Returns content unchanged when `max_width` is unset.
+    private def limit_width(content : String) : String
+      return content unless set?(Prop::MaxWidth) && @max_width > 0
+      content.split('\n').map { |line| Foundation.truncate(line, @max_width) }.join('\n')
+    end
+
+    # Keeps only the first `max_height` lines. Returns content unchanged when `limit_height` is unset.
+    private def limit_height(content : String) : String
+      return content unless set?(Prop::MaxHeight) && @max_height > 0
+      content.split('\n').first(@max_height).join('\n')
     end
 
     # Checks whether a bool property *key* is set and on
