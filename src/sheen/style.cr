@@ -6,100 +6,119 @@ module Sheen
   # An immutable set of styling rules bound to a renderer. Every setter returns a new style, and the original is never mutated.
   #
   # Build one fluently like `Style.new.bold.foreground("#7D56F4)` or via the `Sheen.style` block.
-  class Style
-    # The properties a Style can carry. Used as two bitsets:
+  struct Style
+    # Generates `initialize` and `copy_with` from a singnlel field list so the two can never drift.
+    # Each *decl* is the form `{name, Type, default`.
     #
-    # - `@props`: which properties are explicitly set
-    # - `@attrs`: the on/off value for boolean properties
+    # `nil` means unset
+    macro storage(*decls)
+      def initialize(
+        {% for d in decls %}
+          @{{d[0].id}} : {{d[1]}} = {{d[2]}},
+        {% end %}
+      )
+      end
+
+      # Returns a copy with the named fields overridden. The rest keep current values.
+      #
+      # This is the engine behind every setter.
+      protected def copy_with(
+        {% for d in decls %}
+          {{d[0].id}} = @{{d[0].id}},
+        {% end %}
+      ) : Style
+        Style.new(
+          {% for d in decls %}
+            {{d[0].id}}: {{d[0].id}},
+          {% end %}
+        )
+      end
+    end
+
+    # Emits the setters and `?` getter for a boolean property.
+    macro bool_prop(name)
+      def {{name.id}}(value : Bool = true) : Style
+        copy_with({{name.id}}: value)
+      end
+
+      def {{name.id}}? : Bool
+        @{{name.id}} == true
+      end
+    end
+
+    # Emits the setter and getter (NoColor when unset) for a color property.
+    macro color_prop(name)
+      def {{name.id}}(color : TerminalColor | String | Int) : Style
+        copy_with({{name.id}}: Sheen.color(color))
+      end
+
+      def {{name.id}} : TerminalColor
+        @{{name.id}} || NoColor.new
+      end
+    end
+
+    # Emits the setter and getter for an Int32 property.
     #
-    #  This distinction lets the style know the difference between “Bold was never specified” and “Bold was explicitly turned off”.
-    @[Flags]
-    enum Prop
-      Bold
-      Italic
-      Underline
-      Strikethrough
-      Reverse
-      Blink
-      Faint
-      Foreground
-      Background
-      MaxWidth
-      MaxHeight
+    # Defaults to 0 when unset
+    macro int_prop(name)
+      def {{name.id}}(n : Int32) : Style
+        copy_with({{name.id}}: n)
+      end
+
+      def {{name.id}} : Int32
+        @{{name.id}} || 0
+      end
     end
 
-    @props : Prop = Prop::None # which properties are explicitly set
-    @attrs : Prop = Prop::None # on/off values for bool properties
-    @value : String = ""
-    @foreground : TerminalColor? = nil
-    @background : TerminalColor? = nil
-    @max_width : Int32 = 0
-    @max_height : Int32 = 0
-    @renderer : Renderer
+    # The single source of truth for the property fields. `nil` means unset
+    storage(
+      {renderer, Renderer, Sheen.renderer},
+      {value, String, ""},
+      {bold, Bool?, nil},
+      {italic, Bool?, nil},
+      {underline, Bool?, nil},
+      {strikethrough, Bool?, nil},
+      {reverse, Bool?, nil},
+      {blink, Bool?, nil},
+      {faint, Bool?, nil},
+      {foreground, TerminalColor?, nil},
+      {background, TerminalColor?, nil},
+      {max_width, Int32?, nil},
+      {max_height, Int32?, nil},
+    )
 
-    # Creates an empty Style bound to *renderer* (uses the package default unless provided here).
-    def initialize(@renderer : Renderer = Sheen.renderer, value : String = "")
-      @value = value
-    end
+    bool_prop bold
+    bool_prop italic
+    bool_prop underline
+    bool_prop strikethrough
+    bool_prop reverse
+    bool_prop blink
+    bool_prop faint
 
-    # Enables/disables bold rendering. Returns a new Style.
-    def bold(value : Bool = true) : Style
-      dup.tap &.flag(Prop::Bold, value)
-    end
+    color_prop foreground
+    color_prop background
 
-    # Enables/disables faint rendering. Returns a new Style.
-    def faint(value : Bool = true) : Style
-      dup.tap &.flag(Prop::Faint, value)
-    end
+    int_prop max_width
+    int_prop max_height
 
-    # Enables/disables italic rendering. Returns a new Style.
-    def italic(value : Bool = true) : Style
-      dup.tap &.flag(Prop::Italic, value)
-    end
-
-    # Enables/disables underline rendering. Returns a new Style.
-    def underline(value : Bool = true) : Style
-      dup.tap &.flag(Prop::Underline, value)
-    end
-
-    # Enables/disables strikethrough rendering. Returns a new Style.
-    def strikethrough(value : Bool = true) : Style
-      dup.tap &.flag(Prop::Strikethrough, value)
-    end
-
-    # Enables/disables reverse rendering, swapping bg+fg. Returns a new Style.
-    def reverse(value : Bool = true) : Style
-      dup.tap &.flag(Prop::Reverse, value)
-    end
-
-    # Enables/disables blinking rendering. Returns a new Style.
-    def blink(value : Bool = true) : Style
-      dup.tap &.flag(Prop::Blink, value)
-    end
-
-    # Sets the foreground color, accepting any value `Sheen.color` accepts.
-    def foreground(color : TerminalColor | String | Int) : Style
-      dup.tap &.assign_foreground(Sheen.color(color))
-    end
-
-    # Sets the background color, accepting any value `Sheen.color` accepts.
-    def background(color : TerminalColor | String | Int) : Style
-      dup.tap &.assign_background(Sheen.color(color))
-    end
-
-    # Limits the rendered block to *n* visible cells wide, truncating per line.
-    def max_width(n : Int32) : Style
-      dup.tap &.assign_max_width(n)
-    end
-
-    # Limits the rendered block to *n* lines tall.
-    def max_height(n : Int32) : Style
-      dup.tap &.assign_max_height(n)
-    end
-
-    # Binds *values* as this style's underlying content. Joins *values* by a space.
+    # Binds *values* joined by a space, as this style's underlying content.
     def string(*values : String) : Style
-      dup.tap &.assign_value(values.join(' '))
+      copy_with(value: values.join(' '))
+    end
+
+    # The bound content set via `#string`.
+    def value : String
+      @value
+    end
+
+    # Returns the renderer this style is bound to.
+    def renderer : Renderer
+      @renderer
+    end
+
+    # Rebinds this style to *r*, is chainable.
+    def renderer(r : Renderer) : Style
+      copy_with(renderer: r)
     end
 
     # Renders *strings* through this style's rules, each line is styled independently:
@@ -123,119 +142,8 @@ module Sheen
       parts.unshift(@value) unless @value.empty?
       content = parts.join(' ')
 
-      # No rules set, return the content as-is.
-      return content if @props == Prop::None
-
       content = apply_sequence(sgr_sequence, content)
       limit_height(limit_width(content))
-    end
-
-    # Returns the renderer this style is bound to.
-    def renderer : Renderer
-      @renderer
-    end
-
-    # Rebinds this style to *r*. Chainable.
-    def renderer(r : Renderer) : Style
-      dup.tap &.assign_renderer(r)
-    end
-
-    def bold? : Bool
-      on?(Prop::Bold)
-    end
-
-    def faint? : Bool
-      on?(Prop::Faint)
-    end
-
-    def italic? : Bool
-      on?(Prop::Italic)
-    end
-
-    def underline? : Bool
-      on?(Prop::Underline)
-    end
-
-    def strikethrough? : Bool
-      on?(Prop::Strikethrough)
-    end
-
-    def reverse? : Bool
-      on?(Prop::Reverse)
-    end
-
-    def blink? : Bool
-      on?(Prop::Blink)
-    end
-
-    # The foreground color, or `NoColor` when unset.
-    def foreground : TerminalColor
-      @foreground || NoColor.new
-    end
-
-    # The background color, or `NoColor` when unset.
-    def background : TerminalColor
-      @background || NoColor.new
-    end
-
-    # The maximum width in cells. Defaults to 0 when unset.
-    def max_width : Int32
-      @max_width
-    end
-
-    # The maximum height in lines. Defaults to 0 when unset.
-    def max_height : Int32
-      @max_height
-    end
-
-    # The bound content set via `#string`.
-    def value : String
-      @value
-    end
-
-    # Whether property *key* is explicitly set or not.
-    def set?(key : Prop) : Bool
-      @props.includes?(key)
-    end
-
-    # Marks *key* as explicitly set and records its on/off value.
-    protected def flag(key : Prop, value : Bool) : Nil
-      @props = @props | key
-      @attrs = value ? (@attrs | key) : (@attrs & ~key)
-    end
-
-    # Marks foreground as explicitly set and sets its color.
-    protected def assign_foreground(color : TerminalColor) : Nil
-      @props = @props | Prop::Foreground
-      @foreground = color
-    end
-
-    # Marks background as explicitly set and sets its color.
-    protected def assign_background(color : TerminalColor) : Nil
-      @props = @props | Prop::Background
-      @background = color
-    end
-
-    # Marks max width as explicitly set and sets its value.
-    protected def assign_max_width(n : Int32) : Nil
-      @props = @props | Prop::MaxWidth
-      @max_width = n
-    end
-
-    # Marks max height as explicitly set and sets its value.
-    protected def assign_max_height(n : Int32) : Nil
-      @props = @props | Prop::MaxHeight
-      @max_height = n
-    end
-
-    # Sets *value* as the style's underlying content, rendered when the Style is stringified.
-    protected def assign_value(value : String) : Nil
-      @value = value
-    end
-
-    # Sets *r* as the renderer this style is bound to.
-    protected def assign_renderer(r : Renderer) : Nil
-      @renderer = r
     end
 
     # Builds the opening SGR sequence for this style's rules, or "" if none emit.
@@ -249,19 +157,14 @@ module Sheen
       builder.blink if blink?
       builder.strikethrough if strikethrough?
 
-      if fg = resolve_color(@foreground)
+      if fg = @foreground.try &.resolve(@renderer)
         apply_color(builder, fg, foreground: true)
       end
-      if bg = resolve_color(@background)
+      if bg = @background.try &.resolve(@renderer)
         apply_color(builder, bg, foreground: false)
       end
 
       builder.to_s
-    end
-
-    # Resolves *color* to a concrete SGR color via the bound renderer, or nil.
-    private def resolve_color(color : TerminalColor?) : Foundation::SGRColor?
-      color.try &.resolve(@renderer)
     end
 
     # Applies an already-resolved SGR *color& to *builder* as fg or bg.
@@ -295,19 +198,16 @@ module Sheen
 
     # Truncates each line of *content* to `max_width` visible cells. Returns content unchanged when `max_width` is unset.
     private def limit_width(content : String) : String
-      return content unless set?(Prop::MaxWidth) && @max_width > 0
-      content.split('\n').map { |line| Foundation.truncate(line, @max_width) }.join('\n')
+      width = @max_width
+      return content unless width && width > 0
+      content.split('\n').map { |line| Foundation.truncate(line, width) }.join('\n')
     end
 
     # Keeps only the first `max_height` lines. Returns content unchanged when `limit_height` is unset.
     private def limit_height(content : String) : String
-      return content unless set?(Prop::MaxHeight) && @max_height > 0
-      content.split('\n').first(@max_height).join('\n')
-    end
-
-    # Checks whether a bool property *key* is set and on
-    private def on?(key : Prop) : Bool
-      @attrs.includes?(key)
+      height = @max_height
+      return content unless height && height > 0
+      content.split('\n').first(height).join('\n')
     end
 
     # A mutable scratch object yielded by `Sheen.style`.
