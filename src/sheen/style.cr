@@ -323,14 +323,36 @@ module Sheen
       end
     end
 
-    # Shared render path: prepends bound content, joins, styles, and limits.
+    # Shared render path that joins bound content *strings*, normalizes, styles, and applies widdth/heigh limits to them.
     private def render_parts(strings : Array(String)) : String
       parts = strings.dup
       parts.unshift(@value) unless @value.empty?
       content = parts.join(' ')
 
+      # pre-styling normalization order: tabs -> CRLF -> inline -> wrap
+      content = expand_tabs(content)
+      content = content.gsub("\r\n", "\n")
+      content = content.delete('\n') if inline?
+      if !inline? && (w = @width) && w > 0
+        content = Foundation.wrap(content, w - horizontal_padding, "")
+      end
+
       content = apply_sequence(sgr_sequence, content)
       limit_height(limit_width(content))
+    end
+
+    # Expands tab per `tab_width`, applied even when no style rules are set
+    #
+    # - NO_TAB_CONVERSION: leaves tabs intact
+    # - 0: strips tabs
+    # - anything else: replaces each tab with that many spaces
+    private def expand_tabs(content : String) : String
+      width = tab_width
+      case width
+      when NO_TAB_CONVERSION then content
+      when 0                 then content.delete('\t')
+      else                        content.gsub('\t', " " * width)
+      end
     end
 
     # Builds the opening SGR sequence for this style's rules, or "" if none emit.
