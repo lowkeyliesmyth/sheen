@@ -65,7 +65,11 @@ module Foundation
     fg : SGRColor? = nil,
     bg : SGRColor? = nil,
     reset : Bool = false,
-    unknown : Array(String) = [] of String do
+    unknown : Array(String) = [] of String
+
+  # Meta: Reopened so these methods live outside the `record` macro block but are still attached to the same struct.
+  # Why do this? Because the `crystal docs` commands' `wants_doc`  parser chokes on method docstring comments under the `record` macro.
+  struct Attributes
     # Serializes the attributes to an SGR escape sequence and writes it to *io*.
     # Applies accumulated state in order.
     #
