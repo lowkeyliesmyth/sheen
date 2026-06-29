@@ -44,14 +44,18 @@ module Sheen
 
     # Emits the setters and `?` getter for a boolean property.
     macro bool_prop(name)
+      # Enables or disables {{name.id}}.
+      # Returns a new Style
       def {{name.id}}(value : Bool = true) : Style
         copy_with({{name.id}}: value)
       end
 
+      # True when {{name.id}} is enabled.
       def {{name.id}}? : Bool
         @{{name.id}} == true
       end
 
+      # True when {{name.id}} has been explicitly set.
       def {{name.id}}_set? : Bool
         !@{{name.id}}.nil?
       end
@@ -61,14 +65,18 @@ module Sheen
     #
     # Defaults to NoColor when unset.
     macro color_prop(name)
+      # Sets {{name.id}} from a `TerminalColor`, hex string, or ANSI index.
+      # Returns a new Style
       def {{name.id}}(color : TerminalColor | String | Int) : Style
         copy_with({{name.id}}: Sheen.color(color))
       end
 
+      # The {{name.id}} color, or `NoColor` when unset.
       def {{name.id}} : TerminalColor
         @{{name.id}} || NoColor.new
       end
 
+      # True when {{name.id}} has been explicitly set.
       def {{name.id}}_set? : Bool
         !@{{name.id}}.nil?
       end
@@ -78,14 +86,18 @@ module Sheen
     #
     # Defaults to 0 when unset
     macro int_prop(name)
+      # Sets {{name.id}} to *n*.
+      # Returns a new Style
       def {{name.id}}(n : Int32) : Style
         copy_with({{name.id}}: n)
       end
 
+      # The {{name.id}} value, or 0 when unset.
       def {{name.id}} : Int32
         @{{name.id}} || 0
       end
 
+      # True when {{name.id}} has been explicitly set.
       def {{name.id}}_set? : Bool
         !@{{name.id}}.nil?
       end
@@ -95,14 +107,18 @@ module Sheen
     #
     # *default* when unset.
     macro position_prop(name, default)
+      # Sets {{name.id}} to *pos*.
+      # Returns a new Style.
       def {{name.id}}(pos : Position) : Style
         copy_with({{name.id}}: pos)
       end
 
+      # The {{name.id}} position, or `{{default}}` when unset.
       def {{name.id}} : Position
         @{{name.id}} || {{default}}
       end
 
+      # True when {{name.id}} has been explicitly set.
       def {{name.id}}_set? : Bool
         !@{{name.id}}.nil?
       end
