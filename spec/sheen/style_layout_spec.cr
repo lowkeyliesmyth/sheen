@@ -79,10 +79,17 @@ describe "Sheen::Style layout properties" do
   end
 
   describe "inline" do
-    it "defaults to false and toggles" do
+    it "defaults to unset, and distinguishes between unset and explicitly off" do
+      Sheen::Style.new.inline_set?.should be_false
       Sheen::Style.new.inline?.should be_false
-      Sheen::Style.new.inline.inline?.should be_true
-      Sheen::Style.new.inline(false).inline?.should be_false
+
+      off = Sheen::Style.new.inline(false)
+      off.inline_set?.should be_true
+      off.inline?.should be_false
+
+      on = Sheen::Style.new.inline
+      on.inline_set?.should be_true
+      on.inline?.should be_true
     end
   end
 

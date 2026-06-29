@@ -51,6 +51,10 @@ module Sheen
       def {{name.id}}? : Bool
         @{{name.id}} == true
       end
+
+      def {{name.id}}_set? : Bool
+        !@{{name.id}}.nil?
+      end
     end
 
     # Emits the setter and getter for a color property.
@@ -63,6 +67,10 @@ module Sheen
 
       def {{name.id}} : TerminalColor
         @{{name.id}} || NoColor.new
+      end
+
+      def {{name.id}}_set? : Bool
+        !@{{name.id}}.nil?
       end
     end
 
@@ -77,6 +85,10 @@ module Sheen
       def {{name.id}} : Int32
         @{{name.id}} || 0
       end
+
+      def {{name.id}}_set? : Bool
+        !@{{name.id}}.nil?
+      end
     end
 
     # Emits the setter and getter for a Position property.
@@ -89,6 +101,10 @@ module Sheen
 
       def {{name.id}} : Position
         @{{name.id}} || {{default}}
+      end
+
+      def {{name.id}}_set? : Bool
+        !@{{name.id}}.nil?
       end
     end
 
