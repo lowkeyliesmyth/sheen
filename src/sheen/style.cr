@@ -1,5 +1,6 @@
 require "../foundation"
 require "./color"
+require "./position"
 require "./renderer"
 
 module Sheen
@@ -7,8 +8,14 @@ module Sheen
   #
   # Build one fluently like `Style.new.bold.foreground("#7D56F4)` or via the `Sheen.style` block.
   struct Style
-    # Generates `initialize` and `copy_with` from a singnlel field list so the two can never drift.
-    # Each *decl* is the form `{name, Type, default`.
+    # Default tab expansion width when `tab_width` is unset.
+    TAB_WIDTH_DEFAULT = 4
+
+    # Sentinel for `#tab_width` that disables tab conversion wholesale.
+    NO_TAB_CONVERSION = -1
+
+    # Generates `initialize` and `copy_with` from a single field list so the two can never drift.
+    # Each *decl* is the form `{name, Type, default}`.
     #
     # `nil` means unset
     macro storage(*decls)
@@ -46,7 +53,9 @@ module Sheen
       end
     end
 
-    # Emits the setter and getter (NoColor when unset) for a color property.
+    # Emits the setter and getter for a color property.
+    #
+    # Defaults to NoColor when unset.
     macro color_prop(name)
       def {{name.id}}(color : TerminalColor | String | Int) : Style
         copy_with({{name.id}}: Sheen.color(color))
@@ -70,7 +79,22 @@ module Sheen
       end
     end
 
-    # The single source of truth for the property fields. `nil` means unset
+    # Emits the setter and getter for a Position property.
+    #
+    # *default* when unset.
+    macro position_prop(name, default)
+      def {{name.id}}(pos : Position) : Style
+        copy_with({{name.id}}: pos)
+      end
+
+      def {{name.id}} : Position
+        @{{name.id}} || {{default}}
+      end
+    end
+
+    # The single source of truth for the property fields. `nil` means unset.
+    #
+    # Follows the form `{name, Type, default}`
     storage(
       {renderer, Renderer, Sheen.renderer},
       {value, String, ""},
@@ -85,6 +109,21 @@ module Sheen
       {background, TerminalColor?, nil},
       {max_width, Int32?, nil},
       {max_height, Int32?, nil},
+      {width, Int32?, nil},
+      {height, Int32?, nil},
+      {align_horizontal, Position?, nil},
+      {align_vertical, Position?, nil},
+      {padding_top, Int32?, nil},
+      {padding_right, Int32?, nil},
+      {padding_bottom, Int32?, nil},
+      {padding_left, Int32?, nil},
+      {margin_top, Int32?, nil},
+      {margin_right, Int32?, nil},
+      {margin_bottom, Int32?, nil},
+      {margin_left, Int32?, nil},
+      {margin_background, TerminalColor?, nil},
+      {inline, Bool?, nil},
+      {tab_width, Int32?, nil},
     )
 
     bool_prop bold
@@ -94,12 +133,27 @@ module Sheen
     bool_prop reverse
     bool_prop blink
     bool_prop faint
+    bool_prop inline
 
     color_prop foreground
     color_prop background
+    color_prop margin_background
 
     int_prop max_width
     int_prop max_height
+    int_prop width
+    int_prop height
+    int_prop padding_top
+    int_prop padding_right
+    int_prop padding_bottom
+    int_prop padding_left
+    int_prop margin_top
+    int_prop margin_right
+    int_prop margin_bottom
+    int_prop margin_left
+
+    position_prop align_horizontal, Position::LEFT
+    position_prop align_vertical, Position::TOP
 
     # Binds *values* joined by a space, as this style's underlying content.
     def string(*values : String) : Style
@@ -134,6 +188,109 @@ module Sheen
     # Renders the bound `#string` content.
     def to_s(io : IO) : Nil
       io << render_parts([] of String)
+    end
+
+    # Sets padding via CSS shorthand:
+    # - 1 *value*: all sides
+    # - 2 *values*: vert, horiz
+    # - 3 *values*: top, horiz, bottom
+    # - 4 *values*: top, right, bottom, left
+    #
+    # Any other *value* count is a no-op.
+    def padding(*values : Int32) : Style
+      sides = expand_sides(values.to_a)
+      return self unless sides
+      top, right, bottom, left = sides
+      copy_with(padding_top: top, padding_right: right, padding_bottom: bottom, padding_left: left)
+    end
+
+    # Sets margins via same CSS shorthand as `#padding`
+    def margin(*values : Int32) : Style
+      sides = expand_sides(values.to_a)
+      return self unless sides
+      top, right, bottom, left = sides
+      copy_with(margin_top: top, margin_right: right, margin_bottom: bottom, margin_left: left)
+    end
+
+    # Sets *horizontal* alignment, with optional *vertical* alignment.
+    def align(horizontal : Position, vertical : Position? = nil) : Style
+      if vertical
+        copy_with(align_horizontal: horizontal, align_vertical: vertical)
+      else
+        copy_with(align_horizontal: horizontal)
+      end
+    end
+
+    # Tab expansion width setter.
+    # Use `NO_TAB_CONVERSION` to leave tabs intact.
+    def tab_width(n : Int32) : Style
+      copy_with(tab_width: n)
+    end
+
+    # Tab expansion width getter.
+    # Uses TAB_WIDTH_DEFAULT if not otherwise set.
+    def tab_width : Int32
+      @tab_width || TAB_WIDTH_DEFAULT
+    end
+
+    # Total horizontal padding,  left + right
+    def horizontal_padding : Int32
+      padding_left + padding_right
+    end
+
+    # Total vertical padding, top + bottom
+    def vertical_padding : Int32
+      padding_top + padding_bottom
+    end
+
+    # Total horizontal margins, left + right
+    def horizontal_margins : Int32
+      margin_left + margin_right
+    end
+
+    # Total vertical margins, top + bottom
+    def vertical_margins : Int32
+      margin_top + margin_bottom
+    end
+
+    # Total horizontal border width.
+    # TODO, 0 placeholder until then.
+    def horizontal_border_size : Int32
+      0
+    end
+
+    # Total vertical border width.
+    # TODO, 0 placeholder until then.
+    def vertical_border_size : Int32
+      0
+    end
+
+    # Getter sum of horizontal margins, padding, and border.
+    def horizontal_frame_size : Int32
+      horizontal_margins + horizontal_padding + horizontal_border_size
+    end
+
+    # Getter sum of vertical margins, padding, and border.
+    def vertical_frame_size : Int32
+      vertical_margins + vertical_padding + vertical_border_size
+    end
+
+    # Getter for the {horizontal, vertical} frame size
+    def frame_size : {Int32, Int32}
+      {horizontal_frame_size, vertical_frame_size}
+    end
+
+    # Expands CSS-shorthand *values* to `{top, right, bottom, left}`.
+    #
+    # Returns nil if *values*.size count is not 1-4.
+    private def expand_sides(values : Array(Int32)) : {Int32, Int32, Int32, Int32}?
+      case values.size
+      when 1 then {values[0], values[0], values[0], values[0]}
+      when 2 then {values[0], values[1], values[0], values[1]}
+      when 3 then {values[0], values[1], values[2], values[1]}
+      when 4 then {values[0], values[1], values[2], values[3]}
+      else        nil
+      end
     end
 
     # Shared render path: prepends bound content, joins, styles, and limits.
