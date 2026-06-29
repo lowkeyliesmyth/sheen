@@ -22,9 +22,10 @@ describe "Sheen::Style layout properties" do
       {sty.padding_top, sty.padding_right, sty.padding_bottom, sty.padding_left}.should eq({1, 2, 3, 4})
     end
 
-    it "ignores an invalid value arg count" do
-      sty = Sheen::Style.new.padding(1, 2, 3, 4, 5)
-      {sty.padding_top, sty.padding_right, sty.padding_bottom, sty.padding_left}.should eq({0, 0, 0, 0})
+    it "raises on an invalid value arg count" do
+      expect_raises(ArgumentError, "1-4") do
+        Sheen::Style.new.padding(1, 2, 3, 4, 5)
+      end
     end
   end
 

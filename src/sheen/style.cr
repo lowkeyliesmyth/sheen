@@ -196,19 +196,17 @@ module Sheen
     # - 3 *values*: top, horiz, bottom
     # - 4 *values*: top, right, bottom, left
     #
-    # Any other *value* count is a no-op.
+    # Raises on any other *value* count.
     def padding(*values : Int32) : Style
-      sides = expand_sides(values.to_a)
-      return self unless sides
-      top, right, bottom, left = sides
+      top, right, bottom, left = expand_sides(values.to_a)
       copy_with(padding_top: top, padding_right: right, padding_bottom: bottom, padding_left: left)
     end
 
-    # Sets margins via same CSS shorthand as `#padding`
+    # Sets margins via same CSS shorthand as `#padding`.
+    #
+    # Raises on any *value* count other than 1-4.
     def margin(*values : Int32) : Style
-      sides = expand_sides(values.to_a)
-      return self unless sides
-      top, right, bottom, left = sides
+      top, right, bottom, left = expand_sides(values.to_a)
       copy_with(margin_top: top, margin_right: right, margin_bottom: bottom, margin_left: left)
     end
 
@@ -282,14 +280,14 @@ module Sheen
 
     # Expands CSS-shorthand *values* to `{top, right, bottom, left}`.
     #
-    # Returns nil if *values*.size count is not 1-4.
+    # Raises ArgumentError if *values*.size count is not 1-4.
     private def expand_sides(values : Array(Int32)) : {Int32, Int32, Int32, Int32}?
       case values.size
       when 1 then {values[0], values[0], values[0], values[0]}
       when 2 then {values[0], values[1], values[0], values[1]}
       when 3 then {values[0], values[1], values[2], values[1]}
       when 4 then {values[0], values[1], values[2], values[3]}
-      else        nil
+      else        raise ArgumentError.new("padding/margin accepts 1-4 values, got #{values.size}")
       end
     end
 
