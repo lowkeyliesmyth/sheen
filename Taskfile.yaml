@@ -1,11 +1,11 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
-version: '3'
+version: "3"
 
 tasks:
   spec:
     desc: Run Crystal specs
     cmds:
-      - crystal spec
+      - crystal spec --order random
 
   lint:
     desc: Run Ameba linter
