@@ -158,6 +158,28 @@ describe "Sheen::Style#render - block shaping" do
       style.padding(1, 0).render("hi").should eq("  \nhi\n  ")
     end
   end
+  describe "margins" do
+    it "adds left and right margins" do
+      style.margin(0, 2).render("hi").should eq("  hi  ")
+    end
+
+    it "fills L+R margin space with the margin background" do
+      style.margin(0, 2).margin_background(Sheen::RED).render("hi")
+        .should eq("\e[41m  \e[0mhi\e[41m  \e[0m")
+    end
+
+    it "adds top and bottom margins as full width blank lines" do
+      style.margin(1, 0).render("hi").should eq("  \nhi\n  ")
+    end
+
+    it "spans T+B margins across the full block width" do
+      style.margin(1, 0).render("a\nbbb").should eq("   \na  \nbbb\n   ")
+    end
+
+    it "ignores margins in inline mode" do
+      style.inline.margin(1, 2).render("hi").should eq("hi")
+    end
+  end
 
   describe "vertical fill to height" do
     it "top-aligns by default" do

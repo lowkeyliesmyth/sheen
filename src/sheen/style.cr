@@ -343,6 +343,7 @@ module Sheen
       content = apply_padding(content) unless inline?
       content = align_vertical_block(content) if height > 0
       content = align_horizontal_block(content) if content.includes?('\n') || width > 0
+      content = apply_margins(content) unless inline?
 
       limit_height(limit_width(content))
     end
@@ -431,6 +432,30 @@ module Sheen
       content.split('\n').map do |line|
         n > 0 ? line + spaces : spaces + line
       end.join('\n')
+    end
+
+    # Adds L/R then T/B margins around the shaped block containing *content*. Margin space is filled to the block width and carries only the margin background.
+    private def apply_margins(content : String) : String
+      seq = margin_sequence
+      content = pad_lines(content, -margin_left, seq) if margin_left > 0
+      content = pad_lines(content, margin_right, seq) if margin_right > 0
+
+      if margin_top > 0 || margin_bottom > 0
+        spaces = " " * content.split('\n').max_of { |line| Foundation.string_width(line) }
+        content = style_run(seq, (spaces + "\n") * margin_top) + content if margin_top > 0
+        content = content + style_run(seq, ("\n" + spaces) * margin_bottom) if margin_bottom > 0
+      end
+
+      content
+    end
+
+    # SGR sequence for styling margin whitespace. A separate sequence styler than `whitespace_sequence`.
+    private def margin_sequence : String
+      builder = Foundation::Style.new
+      if bg = @margin_background.try &.resolve(@renderer)
+        apply_color(builder, bg, foreground: false)
+      end
+      builder.to_s
     end
 
     # Wraps *text* in *seq* and a reset.
