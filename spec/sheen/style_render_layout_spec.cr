@@ -1,9 +1,9 @@
 require "../spec_helper"
 
 private def renderer : Sheen::Renderer
-  r = Sheen::Renderer.new(IO::Memory.new)
-  r.color_profile = Foundation::Profile::TrueColor
-  r
+  rnd = Sheen::Renderer.new(IO::Memory.new)
+  rnd.color_profile = Foundation::Profile::TrueColor
+  rnd
 end
 
 private def style : Sheen::Style
@@ -53,7 +53,10 @@ describe "Sheen::Style#render - normalization" do
     end
 
     it "subtracts horizontal padding from the wrap point" do
-      style.width(8).padding(0, 2).render("aaaa bbbb").should eq("aaaa\nbbbb")
+      # 8 cells - 4 of horiz padding wraps content at 4  chars =  this wraps to two lines
+      style.width(8).padding(0, 2).render("aa bb").should eq("  aa    \n  bb    ")
+      # same width with no padding keeps all 8 cells, so doesn't wrap
+      style.width(8).render("aa bb").should eq("aa bb   ")
     end
 
     it "does not wrap in inline mode" do

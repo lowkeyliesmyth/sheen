@@ -338,6 +338,12 @@ module Sheen
       end
 
       content = apply_sequence(sgr_sequence, content)
+
+      # post-styling block shaping order: padding -> height -> align
+      content = apply_padding(content) unless inline?
+      content = align_vertical_block(content) if height > 0
+      content = align_horizontal_block(content) if content.includes?('\n') || width > 0
+
       limit_height(limit_width(content))
     end
 
@@ -376,7 +382,7 @@ module Sheen
       builder.to_s
     end
 
-    # Applies an already-resolved SGR *color& to *builder* as fg or bg.
+    # Applies an already-resolved SGR *color* to *builder* as fg or bg.
     private def apply_color(builder : Foundation::Style, color : Foundation::SGRColor, *, foreground : Bool) : Nil
       case color
       in Foundation::BasicColor
@@ -405,11 +411,88 @@ module Sheen
       end
     end
 
+    # Adds left/right then top/bottom padding around already-styled *content*.
+    #
+    # L-R spaces carry the whitspace styler.
+    # T-B blank lines are filled later by horizontal alignment.
+    private def apply_padding(content : String) : String
+      seq = whitespace_sequence
+      content = pad_lines(content, -padding_left, seq) if padding_left > 0
+      content = pad_lines(content, padding_right, seq) if padding_right > 0
+      content = ("\n" * padding_top) + content if padding_top > 0
+      content = content + ("\n" * padding_bottom) if padding_bottom > 0
+      content
+    end
+
+    # Pads each line by *n* cells: negative on the left, positive on the right.
+    # The space run is wrapped with *seq* styling.
+    private def pad_lines(content : String, n : Int32, seq : String) : String
+      spaces = style_run(seq, " " * n.abs)
+      content.split('\n').map do |line|
+        n > 0 ? line + spaces : spaces + line
+      end.join('\n')
+    end
+
+    # Wraps *text* in *seq* and a reset.
+    # Otherwise returns *text* unchanged when *seq* is empty.
+    private def style_run(seq : String, text : String) : String
+      seq.empty? ? text : "#{seq}#{text}#{Foundation::RESET_STYLE}"
+    end
+
+    # SGR sequence used to style inserted whitespace (padding / alignment fill). Only targets attributes that affect blank cells: `reverse` and `background`.
+    private def whitespace_sequence : String
+      builder = Foundation::Style.new
+      builder.reverse if reverse?
+      if bg = @background.try &.resolve(@renderer)
+        apply_color(builder, bg, foreground: false)
+      end
+      builder.to_s
+    end
+
+    # Pads *content* with blank lines to reach `height`, positioned per `align_vertical`.
+    # A non-named position adds no block fill.
+    private def align_vertical_block(content : String) : String
+      str_height = content.count('\n') + 1
+      gap = height - str_height
+      return content if gap <= 0
+
+      case align_vertical
+      when Position::CENTER then ("\n" * (gap // 2)) + content + ("\n" * (gap - gap // 2))
+      when Position::BOTTOM then ("\n" * gap) + content
+      when Position::TOP    then content + ("\n" * gap)
+      else                       content
+      end
+    end
+
+    # Pads every line of *content* with spaces to the block width, positioned per `align_horizontal`.
+    # Block width is defined by the widest line, or `width` if larger. Fill carries whitespace styling.
+    private def align_horizontal_block(content : String) : String
+      seq = whitespace_sequence
+      lines = content.split('\n')
+      block_width = {lines.max_of { |line| Foundation.string_width(line) }, width}.max
+
+      lines.map do |line|
+        gap = block_width - Foundation.string_width(line)
+        next line if gap <= 0
+
+        case align_horizontal
+        when Position::RIGHT
+          style_run(seq, " " * gap) + line
+        when Position::CENTER
+          style_run(seq, " " * (gap // 2)) + line + style_run(seq, " "*(gap - gap // 2))
+        else
+          line + style_run(seq, " " * gap)
+        end
+      end.join('\n')
+    end
+
     # Truncates each line of *content* to `max_width` visible cells. Returns content unchanged when `max_width` is unset.
     private def limit_width(content : String) : String
       width = @max_width
       return content unless width && width > 0
-      content.split('\n').map { |line| Foundation.truncate(line, width) }.join('\n')
+      content.split('\n').map do |line|
+        Foundation.truncate(line, width)
+      end.join('\n')
     end
 
     # Keeps only the first `max_height` lines. Returns content unchanged when `limit_height` is unset.
