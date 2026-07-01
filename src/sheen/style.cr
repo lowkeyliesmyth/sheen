@@ -1,4 +1,5 @@
 require "../foundation"
+require "./border"
 require "./color"
 require "./position"
 require "./renderer"
@@ -156,6 +157,19 @@ module Sheen
       {margin_background, TerminalColor?, nil},
       {inline, Bool?, nil},
       {tab_width, Int32?, nil},
+      {border_style, Border?, nil},
+      {border_top, Bool?, nil},
+      {border_right, Bool?, nil},
+      {border_bottom, Bool?, nil},
+      {border_left, Bool?, nil},
+      {border_top_foreground, TerminalColor?, nil},
+      {border_right_foreground, TerminalColor?, nil},
+      {border_bottom_foreground, TerminalColor?, nil},
+      {border_left_foreground, TerminalColor?, nil},
+      {border_top_background, TerminalColor?, nil},
+      {border_right_background, TerminalColor?, nil},
+      {border_bottom_background, TerminalColor?, nil},
+      {border_left_background, TerminalColor?, nil},
     )
 
     bool_prop bold
@@ -166,10 +180,22 @@ module Sheen
     bool_prop blink
     bool_prop faint
     bool_prop inline
+    bool_prop border_top
+    bool_prop border_right
+    bool_prop border_bottom
+    bool_prop border_left
 
     color_prop foreground
     color_prop background
     color_prop margin_background
+    color_prop border_top_foreground
+    color_prop border_right_foreground
+    color_prop border_bottom_foreground
+    color_prop border_left_foreground
+    color_prop border_top_background
+    color_prop border_right_background
+    color_prop border_bottom_background
+    color_prop border_left_background
 
     int_prop max_width
     int_prop max_height
@@ -251,6 +277,96 @@ module Sheen
       end
     end
 
+    # Sets the border *b* character styleset without touching side visibility. If no side is later toggled, all four are rendered. (see `#implicit_borders?`)
+    def border_style(b : Border) : Style
+      copy_with(border_style: b)
+    end
+
+    # The border character set, or a `none` border when unset.
+    def border_style : Border
+      @border_style || Border.new
+    end
+
+    # True when a border style has been explicitly set.
+    def border_style_set? : Bool
+      !@border_style.nil?
+    end
+
+    # Sets the border *b* and which sides show, via CSS-style shorthand.
+    # - no *side* values: shows all four
+    # - 1 *side* value: all sides
+    # - 2 *side* values: vert, horiz
+    # - 3 *side* values: top, horiz, bottom
+    # - 4 *side* values: top, right, bottom, left
+    def border(b : Border, *sides : Bool) : Style
+      top, right, bottom, left = which_sides_bool(sides.to_a)
+      copy_with(
+        border_style: b,
+        border_top: top, border_right: right, border_bottom: bottom, border_left: left,
+      )
+    end
+
+    # :ditto:
+    def border(b : Border) : Style
+      copy_with(
+        border_style: b,
+        border_top: true, border_right: true, border_bottom: true, border_left: true,
+      )
+    end
+
+    # Sets all four border foreground *colors* via CSS 1-4 shorthand values.
+    # Raises on a value count outside 1-4.
+    def border_foreground(*colors : TerminalColor | String | Int) : Style
+      top, right, bottom, left = expand_sides(colors.to_a.map { |clr| Sheen.color(clr) })
+      copy_with(
+        border_top_foreground: top, border_right_foreground: right,
+        border_bottom_foreground: bottom, border_left_foreground: left,
+      )
+    end
+
+    # Sets all four border background colors via CSS 1-4 shorthand values.
+    # Raises on a value count outside 1-4.
+    def border_background(*colors : TerminalColor | String | Int) : Style
+      top, right, bottom, left = expand_sides(colors.to_a.map { |clr| Sheen.color(clr) })
+      copy_with(
+        border_top_background: top, border_right_background: right,
+        border_bottom_background: bottom, border_left_background: left,
+      )
+    end
+
+    # True when a border style is set but no side has been explicitly toggled, which triggers all four sides to render
+    def implicit_borders? : Bool
+      !border_style.none? && !(border_top_set? || border_right_set? || border_bottom_set? || border_left_set?)
+    end
+
+    # Cell-width of the top border edge.
+    # Defaults to 0 when the top side is off.
+    def border_top_size : Int32
+      return 0 unless border_top? || implicit_borders?
+      border_style.top_size
+    end
+
+    # Cell-width of the right border edge.
+    # Defaults to 0 when the right side is off.
+    def border_right_size : Int32
+      return 0 unless border_right? || implicit_borders?
+      border_style.right_size
+    end
+
+    # Cell-width of the bottom border edge.
+    # Defaults to 0 when the bottom side is off.
+    def border_bottom_size : Int32
+      return 0 unless border_bottom? || implicit_borders?
+      border_style.bottom_size
+    end
+
+    # Cell-width of the left border edge.
+    # Defaults to 0 when the left side is off.
+    def border_left_size : Int32
+      return 0 unless border_left? || implicit_borders?
+      border_style.left_size
+    end
+
     # Tab expansion width setter.
     # Use `NO_TAB_CONVERSION` to leave tabs intact.
     def tab_width(n : Int32) : Style
@@ -283,16 +399,14 @@ module Sheen
       margin_top + margin_bottom
     end
 
-    # Total horizontal border width.
-    # TODO, 0 placeholder until then.
+    # Total horizontal border width, left + right.
     def horizontal_border_size : Int32
-      0
+      border_left_size + border_right_size
     end
 
-    # Total vertical border width.
-    # TODO, 0 placeholder until then.
+    # Total vertical border width, top + bottom.
     def vertical_border_size : Int32
-      0
+      border_top_size + border_bottom_size
     end
 
     # Getter sum of horizontal margins, padding, and border.
@@ -310,16 +424,30 @@ module Sheen
       {horizontal_frame_size, vertical_frame_size}
     end
 
+    # Expands CSS shorthand *sides* toggles for `{top, right, bottom, left}`.
+    # No *sides* value provided means show them all, 1-4 *sides* provided follows the same shorthand as `#padding`.
+    # Raises on more than four values.
+    private def which_sides_bool(sides : Array(Bool)) : {Bool, Bool, Bool, Bool}
+      case sides.size
+      when 0 then {true, true, true, true}
+      when 1 then {sides[0], sides[0], sides[0], sides[0]}
+      when 2 then {sides[0], sides[1], sides[0], sides[1]}
+      when 3 then {sides[0], sides[1], sides[2], sides[1]}
+      when 4 then {sides[0], sides[1], sides[2], sides[3]}
+      else        raise ArgumentError.new("border accepts 0-4 side values, got #{sides.size}")
+      end
+    end
+
     # Expands CSS-shorthand *values* to `{top, right, bottom, left}`.
     #
     # Raises ArgumentError if *values*.size count is not 1-4.
-    private def expand_sides(values : Array(Int32)) : {Int32, Int32, Int32, Int32}?
+    private def expand_sides(values : Array(T)) : {T, T, T, T} forall T
       case values.size
       when 1 then {values[0], values[0], values[0], values[0]}
       when 2 then {values[0], values[1], values[0], values[1]}
       when 3 then {values[0], values[1], values[2], values[1]}
       when 4 then {values[0], values[1], values[2], values[3]}
-      else        raise ArgumentError.new("padding/margin accepts 1-4 values, got #{values.size}")
+      else        raise ArgumentError.new("CSS shorthand accepts 1-4 values, got #{values.size}")
       end
     end
 

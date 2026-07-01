@@ -201,4 +201,88 @@ describe "Sheen::Style layout properties" do
     sty.vertical_frame_size.should eq(16)
     sty.frame_size.should eq({20, 16})
   end
+
+  describe "borders" do
+    it "defaults to no border" do
+      Sheen::Style.new.border_style.none?.should be_true
+      Sheen::Style.new.horizontal_border_size.should eq(0)
+      Sheen::Style.new.vertical_border_size.should eq(0)
+    end
+
+    it "sets a border on all sides by default" do
+      sty = Sheen::Style.new.border(Sheen::Border.normal)
+      sty.border_style.should eq(Sheen::Border.normal)
+      {sty.border_top?, sty.border_right?, sty.border_bottom?, sty.border_left?}.should eq({true, true, true, true})
+    end
+
+    it "sets sides via CSS style shorthand" do
+      sty = Sheen::Style.new.border(Sheen::Border.normal, true, false)
+      {sty.border_top?, sty.border_right?, sty.border_bottom?, sty.border_left?}.should eq({true, false, true, false})
+    end
+
+    it "raises on more than four side values" do
+      expect_raises(ArgumentError) do
+        Sheen::Style.new.border(Sheen::Border.normal, true, true, true, true, true)
+      end
+    end
+
+    it "toggles a single side" do
+      sty = Sheen::Style.new.border_left(true)
+      sty.border_left?.should be_true
+      sty.border_right?.should be_false
+    end
+
+    describe "implicit borders" do
+      it "is true when a style is set with no side toggles" do
+        Sheen::Style.new.border_style(Sheen::Border.normal).implicit_borders?.should be_true
+      end
+
+      it "is false once any side is toggled" do
+        Sheen::Style.new.border_style(Sheen::Border.normal).border_top(false).implicit_borders?.should be_false
+      end
+
+      it "is false when set via #border, since sides are explicit" do
+        Sheen::Style.new.border(Sheen::Border.normal).implicit_borders?.should be_false
+      end
+    end
+
+    describe "colors" do
+      it "sets all four foregrounds from one value" do
+        sty = Sheen::Style.new.border_foreground(Sheen::RED)
+        {sty.border_top_foreground, sty.border_right_foreground, sty.border_bottom_foreground, sty.border_left_foreground}.should eq({Sheen::RED, Sheen::RED, Sheen::RED, Sheen::RED})
+      end
+
+      it "sets vertical/horizontal foregrounds from two values" do
+        sty = Sheen::Style.new.border_foreground(Sheen::RED, Sheen::BLUE)
+        sty.border_top_foreground.should eq(Sheen::RED)
+        sty.border_right_foreground.should eq(Sheen::BLUE)
+        sty.border_bottom_foreground.should eq(Sheen::RED)
+        sty.border_left_foreground.should eq(Sheen::BLUE)
+      end
+
+      it "sets a single side background" do
+        Sheen::Style.new.border_top_background("#FF0000").border_top_background
+          .should eq(Sheen::Color.new("#FF0000"))
+      end
+    end
+
+    describe "size getters" do
+      it "reports edge sizes when a border is present" do
+        sty = Sheen::Style.new.border(Sheen::Border.normal)
+        sty.border_top_size.should eq(1)
+        sty.horizontal_border_size.should eq(2)
+        sty.vertical_border_size.should eq(2)
+      end
+
+      it "reports 0 for an explicitly disabled side" do
+        Sheen::Style.new.border_style(Sheen::Border.normal).border_top(false).border_top_size.should eq(0)
+      end
+
+      it "folds border into the frame size" do
+        sty = Sheen::Style.new.padding(1).border(Sheen::Border.normal)
+        sty.horizontal_frame_size.should eq(4)
+        sty.vertical_frame_size.should eq(4)
+      end
+    end
+  end
 end
