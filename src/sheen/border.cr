@@ -55,7 +55,7 @@ module Sheen
 
     # Max cell-width of any single grapheme in *piece*.
     # Returns 0 when *piece* is empty.
-    protected def self.max_rune_width(piece : String) : Int32
+    def self.max_rune_width(piece : String) : Int32
       width = 0
       piece.each_grapheme do |grapheme|
         w = Foundation.grapheme_width(grapheme.to_s)

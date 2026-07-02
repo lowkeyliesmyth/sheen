@@ -202,3 +202,37 @@ describe "Sheen::Style#render - block shaping" do
       .should eq("\e[41mhi\e[0m\e[41m  \e[0m")
   end
 end
+
+describe "Sheen::Style#render - borders" do
+  it "draws a normal border around single-line content" do
+    style.border(Sheen::Border.normal).render("hi").should eq("┌──┐\n│hi│\n└──┘")
+  end
+
+  it "draws a rounded border" do
+    style.border(Sheen::Border.rounded).render("hi").should eq("╭──╮\n│hi│\n╰──╯")
+  end
+  it "draws only the sides that are enabled" do
+    style.border(Sheen::Border.normal, true, false, false, false).render("hi")
+      .should eq("──\nhi")
+  end
+
+  it "selects only the corners whose adjacent sides are shows" do
+    style.border(Sheen::Border.normal, true, false, false, true).render("hi")
+      .should eq("┌──\n│hi")
+  end
+
+  it "colors the border without bleeding into the content" do
+    style.border(Sheen::Border.normal).border_foreground(Sheen::RED).render("hi")
+      .should eq("\e[31m┌──┐\e[0m\n\e[31m│\e[0mhi\e[31m│\e[0m\n\e[31m└──┘\e[0m")
+  end
+
+  it "sits outside padding and inside the target width" do
+    style.width(4).padding(0, 1).border(Sheen::Border.normal).render("hi")
+      .should eq("┌────┐\n│ hi │\n└────┘")
+  end
+
+  it "is ignored in inline mode" do
+    style.inline.border(Sheen::Border.normal).render("hi")
+      .should eq("hi")
+  end
+end

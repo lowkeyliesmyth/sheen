@@ -467,10 +467,11 @@ module Sheen
 
       content = apply_sequence(sgr_sequence, content)
 
-      # post-styling block shaping order: padding -> height -> align
+      # post-styling block shaping order: padding -> height -> align -> border -> margins
       content = apply_padding(content) unless inline?
       content = align_vertical_block(content) if height > 0
       content = align_horizontal_block(content) if content.includes?('\n') || width > 0
+      content = apply_border(content) unless inline?
       content = apply_margins(content) unless inline?
 
       limit_height(limit_width(content))
@@ -573,8 +574,134 @@ module Sheen
         content = style_run(seq, (spaces + "\n") * margin_top) + content if margin_top > 0
         content = content + style_run(seq, ("\n" + spaces) * margin_bottom) if margin_bottom > 0
       end
-
       content
+    end
+
+    # Draws the border around already-shaped *content*. Uses explicit side flags or implicit all-sides when only a style is set
+    #
+    # Corners are dropped when the adjacent side is hidden. Each edge and corner carries its own color.
+    private def apply_border(content : String) : String # ameba:disable Metrics/CyclomaticComplexity
+      border = border_style
+      has_top = border_top?
+      has_right = border_right?
+      has_bottom = border_bottom?
+      has_left = border_left?
+
+      if implicit_borders?
+        has_top = has_right = has_bottom = has_left = true
+      end
+
+      return content if border.none? || !(has_top || has_right || has_bottom || has_left)
+
+      lines = content.split('\n')
+      width = lines.max_of { |line| Foundation.string_width(line) }
+
+      top = border.top
+      bottom = border.bottom
+      left = border.left
+      right = border.right
+      tl = border.top_left
+      tr = border.top_right
+      bl = border.bottom_left
+      br = border.bottom_right
+
+      if has_left
+        left = " " if left.empty?
+        width += Border.max_rune_width(left)
+      end
+      right = " " if has_right && right.empty?
+
+      # Fill shown corners with a space if they're empty
+      tl = " " if has_top && has_left && tl.empty?
+      tr = " " if has_top && has_right && tr.empty?
+      bl = " " if has_bottom && has_left && bl.empty?
+      br = " " if has_bottom && has_right && br.empty?
+
+      # Drop corners whose adjacent side is hidden.
+      if has_top
+        tl = "" unless has_left
+        tr = "" unless has_right
+      end
+
+      if has_bottom
+        bl = "" unless has_left
+        br = "" unless has_right
+      end
+
+      # Limit corners to a single rune
+      tl = first_rune(tl)
+      tr = first_rune(tr)
+      bl = first_rune(bl)
+      br = first_rune(br)
+
+      String.build do |io|
+        if has_top
+          edge = render_horizontal_edge(tl, top, tr, width)
+          io << style_border(edge, border_top_foreground, border_top_background) << '\n'
+        end
+
+        left_runes = left.chars
+        right_runes = right.chars
+        left_index = 0
+        right_index = 0
+
+        lines.each_with_index do |line, i|
+          if has_left
+            io << style_border(left_runes[left_index].to_s, border_left_foreground, border_left_background)
+            left_index = (left_index + 1) % left_runes.size
+          end
+          io << line
+          if has_right
+            io << style_border(right_runes[right_index].to_s, border_right_foreground, border_right_background)
+            right_index = (right_index + 1) % right_runes.size
+          end
+          io << '\n' if i < lines.size - 1
+        end
+
+        if has_bottom
+          edge = render_horizontal_edge(bl, bottom, br, width)
+          io << '\n' << style_border(edge, border_bottom_foreground, border_bottom_background)
+        end
+      end
+    end
+
+    # Builds one horizontal (T/B) edge. Starts with the *left* corner, then *middle* repeated to fill *width*, then *right* corner in an "advance then measure" type loop.
+    private def render_horizontal_edge(left : String, middle : String, right : String, width : Int32) : String
+      middle = " " if middle.empty?
+      left_width = Foundation.string_width(left)
+      right_width = Foundation.string_width(right)
+      runes = middle.chars
+      j = 0
+
+      String.build do |io|
+        io << left
+        i = left_width + right_width
+        while i < width + right_width
+          io << runes[j]
+          j = (j + 1) % runes.size
+          i += Foundation.string_width(runes[j].to_s)
+        end
+        io << right
+      end
+    end
+
+    # Wraps a border piece in its foreground and background colors.
+    #
+    # Returns it unchanged if neither resolves under the active profile.
+    private def style_border(piece : String, fg : TerminalColor, bg : TerminalColor) : String
+      fg_color = fg.resolve(@renderer)
+      bg_color = bg.resolve(@renderer)
+      return piece if fg_color.nil? && bg_color.nil?
+
+      builder = Foundation::Style.new
+      apply_color(builder, fg_color, foreground: true) if fg_color
+      apply_color(builder, bg_color, foreground: false) if bg_color
+      style_run(builder.to_s, piece)
+    end
+
+    # The first rune of *str* as a string. Or "" when empty.
+    private def first_rune(str : String) : String
+      str.empty? ? str : str[0].to_s
     end
 
     # SGR sequence for styling margin whitespace. A separate sequence styler than `whitespace_sequence`.
