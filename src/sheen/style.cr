@@ -580,72 +580,87 @@ module Sheen
     # Draws the border around already-shaped *content*. Uses explicit side flags or implicit all-sides when only a style is set
     #
     # Corners are dropped when the adjacent side is hidden. Each edge and corner carries its own color.
-    private def apply_border(content : String) : String # ameba:disable Metrics/CyclomaticComplexity
+    private def apply_border(content : String) : String
+      has_top, has_right, has_bottom, has_left = border_sides
+
       border = border_style
-      has_top = border_top?
-      has_right = border_right?
-      has_bottom = border_bottom?
-      has_left = border_left?
 
-      if implicit_borders?
-        has_top = has_right = has_bottom = has_left = true
-      end
-
-      return content if border.none? || !(has_top || has_right || has_bottom || has_left)
+      return content if border.none?
+      return content unless has_top || has_right || has_bottom || has_left
 
       lines = content.split('\n')
       width = lines.max_of { |line| Foundation.string_width(line) }
-
-      top = border.top
-      bottom = border.bottom
-      left = border.left
-      right = border.right
-      tl = border.top_left
-      tr = border.top_right
-      bl = border.bottom_left
-      br = border.bottom_right
-
-      if has_left
-        left = " " if left.empty?
-        width += Border.max_rune_width(left)
-      end
-      right = " " if has_right && right.empty?
-
-      # Fill shown corners with a space if they're empty
-      tl = " " if has_top && has_left && tl.empty?
-      tr = " " if has_top && has_right && tr.empty?
-      bl = " " if has_bottom && has_left && bl.empty?
-      br = " " if has_bottom && has_right && br.empty?
-
-      # Drop corners whose adjacent side is hidden.
-      if has_top
-        tl = "" unless has_left
-        tr = "" unless has_right
-      end
-
-      if has_bottom
-        bl = "" unless has_left
-        br = "" unless has_right
-      end
-
-      # Limit corners to a single rune
-      tl = first_rune(tl)
-      tr = first_rune(tr)
-      bl = first_rune(bl)
-      br = first_rune(br)
+      edges = resolve_border_edges(border, width, has_top, has_right, has_bottom, has_left)
 
       String.build do |io|
-        if has_top
-          edge = render_horizontal_edge(tl, top, tr, width)
-          io << style_border(edge, border_top_foreground, border_top_background) << '\n'
-        end
+        io << render_top_edge(edges) << '\n' if has_top
+        io << render_border_body(lines, edges, has_left, has_right)
+        io << '\n' << render_bottom_edge(edges) if has_bottom
+      end
+    end
 
-        left_runes = left.chars
-        right_runes = right.chars
-        left_index = 0
-        right_index = 0
+    # Resolves which border sides are visible, defaulting to true for all four visible when borders are implicit.
+    private def border_sides : {Bool, Bool, Bool, Bool}
+      implicit_borders? ? {true, true, true, true} : {border_top?, border_right?, border_bottom?, border_left?}
+    end
 
+    # Normalized border geometry for the visible *has_* sides:
+    # - empty shown edges become spaces
+    # - *width* is widened for the left edge
+    # - each corner is dropped/filled/trimmed
+    private def resolve_border_edges(border : Border, width : Int32, has_top : Bool, has_right : Bool, has_bottom : Bool, has_left : Bool) : BorderEdges
+      left = border.left
+      right = border.right
+      left = " " if has_left && left.empty?
+      right = " " if has_right && right.empty?
+
+      BorderEdges.new(
+        top: border.top,
+        bottom: border.bottom,
+        left: left,
+        right: right,
+        tl: resolve_corner(border.top_left, has_top, has_left),
+        tr: resolve_corner(border.top_right, has_top, has_right),
+        bl: resolve_corner(border.bottom_left, has_bottom, has_left),
+        br: resolve_corner(border.bottom_right, has_bottom, has_right),
+        width: has_left ? width + Border.max_rune_width(left) : width,
+      )
+    end
+
+    # Resolves a single *corner* rune:
+    # - "" when either *side* is hidden
+    # - " " when both *sides* show but the *corner* char is empty
+    # - otherwise the corner's first rune
+    private def resolve_corner(corner : String, side_a : Bool, side_b : Bool) : String
+      return "" unless side_a && side_b
+      first_rune(corner.empty? ? " " : corner)
+    end
+
+    # Renders the top *edges* (corners + fill) in its border colors.
+    private def render_top_edge(edges : BorderEdges) : String
+      style_border(
+        render_horizontal_edge(edges.tl, edges.top, edges.tr, edges.width), border_top_foreground, border_top_background,
+      )
+    end
+
+    # Renders the bottom *edges* (corners + fill)  in its border colors.
+    private def render_bottom_edge(edges : BorderEdges) : String
+      style_border(
+        render_horizontal_edge(edges.bl, edges.bottom, edges.br, edges.width),
+        border_bottom_foreground, border_bottom_background,
+      )
+    end
+
+    # Renders content *lines* with the left+right *edge* runes interleaved per side
+    private def render_border_body(lines : Array(String), edges : BorderEdges, has_left : Bool, has_right : Bool) : String
+      left_runes = edges.left.chars
+      right_runes = edges.right.chars
+      left_index = 0
+      right_index = 0
+
+      String.build do |io|
         lines.each_with_index do |line, i|
+          io << '\n' if i > 0
           if has_left
             io << style_border(left_runes[left_index].to_s, border_left_foreground, border_left_background)
             left_index = (left_index + 1) % left_runes.size
@@ -655,17 +670,22 @@ module Sheen
             io << style_border(right_runes[right_index].to_s, border_right_foreground, border_right_background)
             right_index = (right_index + 1) % right_runes.size
           end
-          io << '\n' if i < lines.size - 1
-        end
-
-        if has_bottom
-          edge = render_horizontal_edge(bl, bottom, br, width)
-          io << '\n' << style_border(edge, border_bottom_foreground, border_bottom_background)
         end
       end
     end
 
-    # Builds one horizontal (T/B) edge. Starts with the *left* corner, then *middle* repeated to fill *width*, then *right* corner in an "advance then measure" type loop.
+    private record BorderEdges,
+      top : String,
+      bottom : String,
+      left : String,
+      right : String,
+      tl : String,
+      tr : String,
+      bl : String,
+      br : String,
+      width : Int32
+
+    # Builds one horizontal edge. Starts with the *left* corner, then *middle* repeated to fill *width*, then *right* corner in an "advance then measure" type loop.
     private def render_horizontal_edge(left : String, middle : String, right : String, width : Int32) : String
       middle = " " if middle.empty?
       left_width = Foundation.string_width(left)
@@ -685,7 +705,7 @@ module Sheen
       end
     end
 
-    # Wraps a border piece in its foreground and background colors.
+    # Wraps a rendered border *piece* (a corner or edge string, already built from border characters) in its *foreground* and *background* colors.
     #
     # Returns it unchanged if neither resolves under the active profile.
     private def style_border(piece : String, fg : TerminalColor, bg : TerminalColor) : String
