@@ -424,9 +424,10 @@ module Sheen
       {horizontal_frame_size, vertical_frame_size}
     end
 
-    # Expands CSS shorthand *sides* toggles for `{top, right, bottom, left}`.
-    # No *sides* value provided means show them all, 1-4 *sides* provided follows the same shorthand as `#padding`.
-    # Raises on more than four values.
+    # Expands CSS shorthand *sides* toggles to `{top, right, bottom, left}`.
+    # No *sides* value provided means implicit "show them all".
+    # 1-4 *sides* provided follows the same shorthand as `#padding`.
+    # Raises when *sides*.size values provided is more than 4.
     private def which_sides_bool(sides : Array(Bool)) : {Bool, Bool, Bool, Bool}
       case sides.size
       when 0 then {true, true, true, true}
@@ -440,7 +441,7 @@ module Sheen
 
     # Expands CSS-shorthand *values* to `{top, right, bottom, left}`.
     #
-    # Raises ArgumentError if *values*.size count is not 1-4.
+    # Raises when *values*.size count is outside 1-4.
     private def expand_sides(values : Array(T)) : {T, T, T, T} forall T
       case values.size
       when 1 then {values[0], values[0], values[0], values[0]}
@@ -451,7 +452,7 @@ module Sheen
       end
     end
 
-    # Shared render path that joins bound content *strings*, normalizes, styles, and applies widdth/heigh limits to them.
+    # Shared render path that joins bound content *strings*, normalizes, styles, and applies width/height limits to them.
     private def render_parts(strings : Array(String)) : String
       parts = strings.dup
       parts.unshift(@value) unless @value.empty?
@@ -461,6 +462,9 @@ module Sheen
       content = expand_tabs(content)
       content = content.gsub("\r\n", "\n")
       content = content.delete('\n') if inline?
+      # Why are we reading the raw @width here rather than the `width` getter?
+      # Reason: Wrapping has to treat "no explicit width set" and "width set to 0" with the same "don't wrap me bro" behavior. Using @width here gives `Foundation.wrap` a confirmed non-nil arg.
+      # Basically the equivalent of `width_set? && width > 0`
       if !inline? && (w = @width) && w > 0
         content = Foundation.wrap(content, w - horizontal_padding, "")
       end
@@ -543,7 +547,7 @@ module Sheen
 
     # Adds left/right then top/bottom padding around already-styled *content*.
     #
-    # L-R spaces carry the whitspace styler.
+    # L-R spaces carry the whitespace styler.
     # T-B blank lines are filled later by horizontal alignment.
     private def apply_padding(content : String) : String
       seq = whitespace_sequence
