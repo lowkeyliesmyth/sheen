@@ -235,4 +235,22 @@ describe "Sheen::Style#render - borders" do
     style.inline.border(Sheen::Border.normal).render("hi")
       .should eq("hi")
   end
+
+  it "Fills a multi-width border edge to the body width" do
+    # top fill cycles 口(2 cells) + x(1 cell); every other piece is single-width.
+    border = Sheen::Border.new(
+      top: "口x",
+      bottom: "-",
+      left: "|",
+      right: "|",
+      top_left: "+",
+      top_right: "+",
+      bottom_left: "+",
+      bottom_right: "+",
+    )
+    # Body is "|hi|" = 4 cells, so the top edge must also be 4 cells: "+口+".
+    style.border(border).render("hi").should eq("+口+\n|hi|\n+--+")
+    style.border(border).render("hey").should eq("+口x+\n|hey|\n+---+")
+    style.border(border).render("hola").should eq("+口x口+\n|hola|\n+----+")
+  end
 end

@@ -701,9 +701,10 @@ module Sheen
         io << left
         i = left_width + right_width
         while i < width + right_width
-          io << runes[j]
+          rune = runes[j]
+          io << rune
+          i += Foundation.string_width(rune.to_s)
           j = (j + 1) % runes.size
-          i += Foundation.string_width(runes[j].to_s)
         end
         io << right
       end
