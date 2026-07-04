@@ -516,18 +516,9 @@ module Sheen
       builder.to_s
     end
 
-    # Applies an already-resolved SGR *color* to *builder* as fg or bg.
+    # Appends an already resolved SGR *color* to *builder* as foreground or background.
     private def apply_color(builder : Foundation::Style, color : Foundation::SGRColor, *, foreground : Bool) : Nil
-      case color
-      in Foundation::BasicColor
-        foreground ? builder.foreground_basic(color.index) : builder.background_basic(color.index)
-      in Foundation::IndexedColor
-        foreground ? builder.foreground_indexed(color.index) : builder.background_indexed(color.index)
-      in Foundation::RGBColor
-        foreground ? builder.foreground_rgb(color.r, color.g, color.b) : builder.background_rgb(color.r, color.g, color.b)
-      in Foundation::DefaultColor
-        foreground ? builder.default_foreground : builder.default_background
-      end
+      foreground ? builder.foreground(color) : builder.background(color)
     end
 
     # Wraps each line of *content* with *seq* and a reset, so styling resets at each newline.
