@@ -99,6 +99,16 @@ module Foundation
       self
     end
 
+    # Appends a foreground color resolved to its SGR kind (eg basic/indexed/rgb/default).
+    def foreground(color : SGRColor) : self
+      case color
+      in BasicColor   then foreground_basic(color.index)
+      in IndexedColor then foreground_indexed(color.index)
+      in RGBColor     then foreground_rgb(color.r, color.g, color.b)
+      in DefaultColor then default_foreground
+      end
+    end
+
     # Set a basic bg color by index 0..15 (SGR 40-37 / 100-107 bright).
     #
     # Raises if *index* > 15
@@ -125,6 +135,16 @@ module Foundation
     def default_background : self
       @params << "49"
       self
+    end
+
+    # Appends a background color resolved to its SGR kind (eg basic/indexed/rgb/default).
+    def background(color : SGRColor) : self
+      case color
+      in BasicColor   then background_basic(color.index)
+      in IndexedColor then background_indexed(color.index)
+      in RGBColor     then background_rgb(color.r, color.g, color.b)
+      in DefaultColor then default_background
+      end
     end
 
     # Appends a raw SGR parameter as-is, for params that the typed setters don't model.
