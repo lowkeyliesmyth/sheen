@@ -4,7 +4,7 @@ require "./color"
 require "./renderer"
 
 module Sheen
-  # Draws a `Style`'s border aroundn already-shaped content. A short-lived collaborator is constructer per render.
+  # Draws a `Style`'s border around already-shaped content. A short-lived collaborator is constructed per render.
   # Reads geometry and colors through the bound `Style`'s public getters.
   struct BorderPainter
     def initialize(@style : Style)
