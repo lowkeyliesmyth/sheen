@@ -60,6 +60,11 @@ module Sheen
       def {{name.id}}_set? : Bool
         !@{{name.id}}.nil?
       end
+
+      # Returns a new Style with {{name.id}} returned to the unset (inheritable) state.
+      def unset_{{name.id}} : Style
+        copy_with({{name.id}}: nil)
+      end
     end
 
     # Emits the setter and getter for a color property.
@@ -80,6 +85,11 @@ module Sheen
       # True when {{name.id}} has been explicitly set.
       def {{name.id}}_set? : Bool
         !@{{name.id}}.nil?
+      end
+
+      # Returns a new Style with {{name.id}} returned to the unset (inheritable) state.
+      def unset_{{name.id}} : Style
+        copy_with({{name.id}}: nil)
       end
     end
 
@@ -102,6 +112,11 @@ module Sheen
       def {{name.id}}_set? : Bool
         !@{{name.id}}.nil?
       end
+
+      # Returns a new Style with {{name.id}} returned to the unset (inheritable) state.
+      def unset_{{name.id}} : Style
+        copy_with({{name.id}}: nil)
+      end
     end
 
     # Emits the setter and getter for a Position property.
@@ -122,6 +137,11 @@ module Sheen
       # True when {{name.id}} has been explicitly set.
       def {{name.id}}_set? : Bool
         !@{{name.id}}.nil?
+      end
+
+      # Returns a new Style with {{name.id}} returned to the unset (inheritable) state.
+      def unset_{{name.id}} : Style
+        copy_with({{name.id}}: nil)
       end
     end
 
@@ -218,6 +238,11 @@ module Sheen
       copy_with(value: values.join(' '))
     end
 
+    # Returns a new Style with the bound string value cleared
+    def unset_string : Style
+      copy_with(string: "")
+    end
+
     # The bound content set via `#string`.
     def value : String
       @value
@@ -260,12 +285,28 @@ module Sheen
       copy_with(padding_top: top, padding_right: right, padding_bottom: bottom, padding_left: left)
     end
 
+    # Returns a new Style with all four padding sides unset.
+    def unset_padding : Style
+      copy_with(padding_top: nil,
+        padding_right: nil,
+        padding_bottom: nil,
+        padding_left: nil)
+    end
+
     # Sets margins via same CSS shorthand as `#padding`.
     #
     # Raises on any *value* count other than 1-4.
     def margin(*values : Int32) : Style
       top, right, bottom, left = expand_sides(values.to_a)
       copy_with(margin_top: top, margin_right: right, margin_bottom: bottom, margin_left: left)
+    end
+
+    # Returns a new Style with all four margin sides unset
+    def unset_margins : Style
+      copy_with(margin_top: nil,
+        margin_right: nil,
+        margin_bottom: nil,
+        margin_left: nil)
     end
 
     # Sets *horizontal* alignment, with optional *vertical* alignment.
@@ -275,6 +316,11 @@ module Sheen
       else
         copy_with(align_horizontal: horizontal)
       end
+    end
+
+    # Returns a new Style with both alignment axes unset
+    def unset_align : Style
+      copy_with(align_horizontal: nil, align_vertical: nil)
     end
 
     # Sets the border *b* character styleset without touching side visibility. If no side is later toggled, all four are rendered. (see `#implicit_borders?`)
@@ -290,6 +336,11 @@ module Sheen
     # True when a border style has been explicitly set.
     def border_style_set? : Bool
       !@border_style.nil?
+    end
+
+    # Returns a new Style with the border style removed.
+    def unset_border_style : Style
+      copy_with(border_style: nil)
     end
 
     # Sets the border *b* and which sides show, via CSS-style shorthand.
@@ -319,8 +370,20 @@ module Sheen
     def border_foreground(*colors : TerminalColor | String | Int) : Style
       top, right, bottom, left = expand_sides(colors.to_a.map { |clr| Sheen.color(clr) })
       copy_with(
-        border_top_foreground: top, border_right_foreground: right,
-        border_bottom_foreground: bottom, border_left_foreground: left,
+        border_top_foreground: top,
+        border_right_foreground: right,
+        border_bottom_foreground: bottom,
+        border_left_foreground: left,
+      )
+    end
+
+    # Returns a new Style with all four border foreground colors unset.
+    def unset_border_foreground : Style
+      copy_with(
+        border_top_foreground: nil,
+        border_right_foreground: nil,
+        border_bottom_foreground: nil,
+        border_left_foreground: nil,
       )
     end
 
@@ -329,9 +392,36 @@ module Sheen
     def border_background(*colors : TerminalColor | String | Int) : Style
       top, right, bottom, left = expand_sides(colors.to_a.map { |clr| Sheen.color(clr) })
       copy_with(
-        border_top_background: top, border_right_background: right,
-        border_bottom_background: bottom, border_left_background: left,
+        border_top_background: top,
+        border_right_background: right,
+        border_bottom_background: bottom,
+        border_left_background: left,
       )
+    end
+
+    # Returns a new Style with all four border background colors unset.
+    def unset_border_background : Style
+      copy_with(border_top_background: nil,
+        border_right_background: nil,
+        border_bottom_background: nil,
+        border_left_background: nil)
+    end
+
+    # Tab expansion width setter.
+    # Use `NO_TAB_CONVERSION` to leave tabs intact.
+    def tab_width(n : Int32) : Style
+      copy_with(tab_width: n)
+    end
+
+    # Tab expansion width getter.
+    # Uses TAB_WIDTH_DEFAULT if not otherwise set.
+    def tab_width : Int32
+      @tab_width || TAB_WIDTH_DEFAULT
+    end
+
+    # Returns a new STyle with the tab width returned to its default.
+    def unset_tab_width : Style
+      copy_with(tab_width: nil)
     end
 
     # True when a border style is set but no side has been explicitly toggled, which triggers all four sides to render
@@ -365,18 +455,6 @@ module Sheen
     def border_left_size : Int32
       return 0 unless border_left? || implicit_borders?
       border_style.left_size
-    end
-
-    # Tab expansion width setter.
-    # Use `NO_TAB_CONVERSION` to leave tabs intact.
-    def tab_width(n : Int32) : Style
-      copy_with(tab_width: n)
-    end
-
-    # Tab expansion width getter.
-    # Uses TAB_WIDTH_DEFAULT if not otherwise set.
-    def tab_width : Int32
-      @tab_width || TAB_WIDTH_DEFAULT
     end
 
     # Total horizontal padding,  left + right
