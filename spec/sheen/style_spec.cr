@@ -329,3 +329,42 @@ describe "Sheen::Style#unset_" do
     Sheen::Style.new.tab_width(2).unset_tab_width.tab_width.should eq(4)
   end
 end
+
+describe "Sheen::Style#inherit" do
+  it "adopts a property the other style has set but this one hasn't" do
+    Sheen::Style.new.inherit(Sheen::Style.new.bold).bold?.should be_true
+  end
+
+  it "keeps this style's own set property over the others'" do
+    base = Sheen::Style.new.foreground("#FF0000")
+    base.inherit(Sheen::Style.new.foreground("#00FF00")).foreground.should eq(Sheen::Color.new("#FF0000"))
+  end
+
+  it "respects an explicitly disabled property" do
+    inherited = Sheen::Style.new.bold(false).inherit(Sheen::Style.new.bold)
+    inherited.bold?.should be_false
+    inherited.bold_set?.should be_true
+  end
+
+  it "does not inherit padding" do
+    Sheen::Style.new.inherit(Sheen::Style.new.padding(2)).padding_top_set?.should be_false
+  end
+
+  it "does not inherit margins" do
+    Sheen::Style.new.inherit(Sheen::Style.new.margin(2)).margin_top_set?.should be_false
+  end
+
+  it "does not inherit the bound string value" do
+    Sheen::Style.new.inherit(Sheen::Style.new.string("x")).value.should eq("")
+  end
+
+  it "seeds the margin background from an inherited background" do
+    Sheen::Style.new.inherit(Sheen::Style.new.background("#FF0000")).margin_background
+      .should eq(Sheen::Color.new("#FF0000"))
+  end
+
+  it "does not seed the margin background when this style already has one" do
+    Sheen::Style.new.margin_background("#0000FF").inherit(Sheen::Style.new.background("#FF0000")).margin_background
+      .should eq(Sheen::Color.new("#0000FF"))
+  end
+end

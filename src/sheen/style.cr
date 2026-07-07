@@ -233,6 +233,58 @@ module Sheen
     position_prop align_horizontal, Position::LEFT
     position_prop align_vertical, Position::TOP
 
+    # Overlays *other* onto this style.
+    # For every property *other* has explicitly set that this style has not, this style adopts the value of *other* and returns a new Style.
+    #
+    # Note:
+    # - Inheriting a background also seeds the margin background when neither style has one set.
+    # - Padding, margins, and the bound string value are the exceptions and are **never** inherited.
+    def inherit(other : Style) : Style
+      inherited = self
+      {% for name in [
+                       "bold",
+                       "italic",
+                       "underline",
+                       "strikethrough",
+                       "reverse",
+                       "blink",
+                       "faint",
+                       "foreground",
+                       "background",
+                       "max_width",
+                       "max_height",
+                       "width",
+                       "height",
+                       "align_horizontal",
+                       "align_vertical",
+                       "margin_background",
+                       "inline",
+                       "tab_width",
+                       "border_style",
+                       "border_top",
+                       "border_right",
+                       "border_bottom",
+                       "border_left",
+                       "border_top_foreground",
+                       "border_right_foreground",
+                       "border_bottom_foreground",
+                       "border_left_foreground",
+                       "border_top_background",
+                       "border_right_background",
+                       "border_bottom_background",
+                       "border_left_background",
+                     ] %}
+    inherited = inherited.copy_with({{name.id}}: other.@{{name.id}}) if @{{name.id}}.nil?
+        {% end %}
+
+      # A background also seeds the margin background, but only if neither style sets one.
+      if !other.@background.nil? && @margin_background.nil? && other.@margin_background.nil?
+        inherited = inherited.copy_with(margin_background: other.@background)
+      end
+
+      inherited
+    end
+
     # Binds *values* joined by a space, as this style's underlying content.
     def string(*values : String) : Style
       copy_with(value: values.join(' '))
