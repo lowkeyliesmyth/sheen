@@ -113,12 +113,6 @@ describe "Sheen::Style layout properties" do
     end
   end
 
-  it "sets a single padding side" do
-    sty = Sheen::Style.new.padding_left(5)
-    sty.padding_left.should eq(5)
-    sty.padding_right.should eq(0)
-  end
-
   describe "margins" do
     it "expand via the same CSS shorthand as padding" do
       sty = Sheen::Style.new.margin(1, 2)
@@ -132,12 +126,6 @@ describe "Sheen::Style layout properties" do
     it "default to no background" do
       Sheen::Style.new.margin_background.should eq(Sheen::NoColor.new)
     end
-  end
-
-  it "stores width and height" do
-    sty = Sheen::Style.new.width(20).height(5)
-    sty.width.should eq(20)
-    sty.height.should eq(5)
   end
 
   describe "alignment" do
@@ -189,17 +177,6 @@ describe "Sheen::Style layout properties" do
     it "accepts the no-conversion sentinel" do
       Sheen::Style.new.tab_width(Sheen::Style::NO_TAB_CONVERSION)
     end
-  end
-
-  it "sums padding and margins into frame sizes" do
-    sty = Sheen::Style.new.padding(1, 2, 3, 4).margin(5, 6, 7, 8)
-    sty.horizontal_padding.should eq(6)
-    sty.vertical_padding.should eq(4)
-    sty.horizontal_margins.should eq(14)
-    sty.vertical_margins.should eq(12)
-    sty.horizontal_frame_size.should eq(20)
-    sty.vertical_frame_size.should eq(16)
-    sty.frame_size.should eq({20, 16})
   end
 
   describe "borders" do
@@ -284,5 +261,71 @@ describe "Sheen::Style layout properties" do
         sty.vertical_frame_size.should eq(4)
       end
     end
+  end
+
+  it "sets a single padding side" do
+    sty = Sheen::Style.new.padding_left(5)
+    sty.padding_left.should eq(5)
+    sty.padding_right.should eq(0)
+  end
+
+  it "sums padding and margins into frame sizes" do
+    sty = Sheen::Style.new.padding(1, 2, 3, 4).margin(5, 6, 7, 8)
+    sty.horizontal_padding.should eq(6)
+    sty.vertical_padding.should eq(4)
+    sty.horizontal_margins.should eq(14)
+    sty.vertical_margins.should eq(12)
+    sty.horizontal_frame_size.should eq(20)
+    sty.vertical_frame_size.should eq(16)
+    sty.frame_size.should eq({20, 16})
+  end
+
+  it "stores width and height" do
+    sty = Sheen::Style.new.width(20).height(5)
+    sty.width.should eq(20)
+    sty.height.should eq(5)
+  end
+end
+
+describe "Sheen::Style#unset_" do
+  it "returns a property to the unset state" do
+    sty = Sheen::Style.new.bold.unset_bold
+    sty.bold_set?.should be_false
+    sty.bold?.should be_false
+  end
+
+  it "makes a property inheritable again" do
+    sty = Sheen::Style.new.bold(false).unset_bold
+    sty.inherit(Sheen::Style.new.bold).bold?.should be_true
+  end
+
+  it "unsets a color" do
+    Sheen::Style.new.foreground("#FF0000").unset_foreground.foreground_set?.should be_false
+  end
+
+  it "unsets all padding sides" do
+    sty = Sheen::Style.new.padding(2).unset_padding
+    {sty.padding_top_set?, sty.padding_right_set?, sty.padding_bottom_set?, sty.padding_left_set?}
+      .should eq({false, false, false, false})
+  end
+
+  it "unsets both alignment axes" do
+    sty = Sheen::Style.new.align(Sheen::Position::CENTER, Sheen::Position::BOTTOM).unset_align
+    sty.align_horizontal_set?.should be_false
+    sty.align_vertical_set?.should be_false
+  end
+
+  it "unsets all border foreground colors" do
+    sty = Sheen::Style.new.border_foreground(Sheen::RED).unset_border_foreground
+    sty.border_top_foreground_set?.should be_false
+    sty.border_left_foreground_set?.should be_false
+  end
+
+  it "clears the bound string value" do
+    Sheen::Style.new.string("hi").unset_string.value.should eq("")
+  end
+
+  it "returns the tab width to its default" do
+    Sheen::Style.new.tab_width(2).unset_tab_width.tab_width.should eq(4)
   end
 end

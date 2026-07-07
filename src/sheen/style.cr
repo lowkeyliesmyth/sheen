@@ -240,7 +240,7 @@ module Sheen
 
     # Returns a new Style with the bound string value cleared
     def unset_string : Style
-      copy_with(string: "")
+      copy_with(value: "")
     end
 
     # The bound content set via `#string`.
