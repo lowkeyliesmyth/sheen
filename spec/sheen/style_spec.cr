@@ -328,6 +328,16 @@ describe "Sheen::Style#unset_" do
   it "returns the tab width to its default" do
     Sheen::Style.new.tab_width(2).unset_tab_width.tab_width.should eq(4)
   end
+
+  it "unsets a whitespace toggle" do
+    Sheen::Style.new.color_whitespace(false).unset_color_whitespace.color_whitespace_set?
+      .should be_false
+  end
+
+  it "unsets a transform" do
+    Sheen::Style.new.transform(&.upcase).unset_transform.transform_set?
+      .should be_false
+  end
 end
 
 describe "Sheen::Style#inherit" do
@@ -366,5 +376,44 @@ describe "Sheen::Style#inherit" do
   it "does not seed the margin background when this style already has one" do
     Sheen::Style.new.margin_background("#0000FF").inherit(Sheen::Style.new.background("#FF0000")).margin_background
       .should eq(Sheen::Color.new("#0000FF"))
+  end
+  it "inherits a whitespace toggle" do
+    Sheen::Style.new.inherit(Sheen::Style.new.underline_spaces).underline_spaces?.should be_true
+  end
+
+  it "inherits a transform" do
+    inherited = Sheen::Style.new.inherit(Sheen::Style.new.transform(&.upcase))
+    inherited.transform.not_nil!.call("hi").should eq("HI") # ameba:disable Lint/NotNil
+  end
+end
+
+describe "space and whitespace toggles" do
+  it "default to unset" do
+    sty = Sheen::Style.new
+    sty.underline_spaces_set?.should be_false
+    sty.strikethrough_spaces_set?.should be_false
+    sty.color_whitespace_set?.should be_false
+  end
+
+  it "store explicit values, distinguishing unset from off" do
+    sty = Sheen::Style.new.underline_spaces.strikethrough_spaces(false).color_whitespace(false)
+    sty.underline_spaces?.should be_true
+    sty.strikethrough_spaces?.should be_false
+    sty.strikethrough_spaces_set?.should be_true
+    sty.color_whitespace?.should be_false
+    sty.color_whitespace_set?.should be_true
+  end
+end
+
+describe "transform" do
+  it "defaults to unset" do
+    Sheen::Style.new.transform_set?.should be_false
+    Sheen::Style.new.transform.should be_nil
+  end
+
+  it "stores a render-time transform" do
+    sty = Sheen::Style.new.transform(&.upcase)
+    sty.transform_set?.should be_true
+    sty.transform.not_nil!.call("hi").should eq("HI") # ameba:disable Lint/NotNil
   end
 end

@@ -15,6 +15,10 @@ module Sheen
     # Sentinel for `#tab_width` that disables tab conversion wholesale.
     NO_TAB_CONVERSION = -1
 
+    # Content trnasform applied at render time, before styling time.
+    # This alias is used in the `storage` macro to sidestep including a bare `Proc (String, String)?` that would break the macro tuple parsing.
+    alias Transform = String -> String
+
     # Generates `initialize` and `copy_with` from a single field list so the two can never drift.
     # Each *decl* is the form `{name, Type, default}`.
     #
@@ -158,6 +162,9 @@ module Sheen
       {reverse, Bool?, nil},
       {blink, Bool?, nil},
       {faint, Bool?, nil},
+      {underline_spaces, Bool?, nil},
+      {strikethrough_spaces, Bool?, nil},
+      {color_whitespace, Bool?, nil},
       {foreground, TerminalColor?, nil},
       {background, TerminalColor?, nil},
       {max_width, Int32?, nil},
@@ -190,6 +197,7 @@ module Sheen
       {border_right_background, TerminalColor?, nil},
       {border_bottom_background, TerminalColor?, nil},
       {border_left_background, TerminalColor?, nil},
+      {transform, Transform?, nil},
     )
 
     bool_prop bold
@@ -199,6 +207,9 @@ module Sheen
     bool_prop reverse
     bool_prop blink
     bool_prop faint
+    bool_prop underline_spaces
+    bool_prop strikethrough_spaces
+    bool_prop color_whitespace
     bool_prop inline
     bool_prop border_top
     bool_prop border_right
@@ -249,6 +260,9 @@ module Sheen
                        "reverse",
                        "blink",
                        "faint",
+                       "underline_spaces",
+                       "strikethrough_spaces",
+                       "color_whitespace",
                        "foreground",
                        "background",
                        "max_width",
@@ -273,6 +287,7 @@ module Sheen
                        "border_right_background",
                        "border_bottom_background",
                        "border_left_background",
+                       "transform",
                      ] %}
     inherited = inherited.copy_with({{name.id}}: other.@{{name.id}}) if @{{name.id}}.nil?
         {% end %}
@@ -308,6 +323,27 @@ module Sheen
     # Rebinds this style to *r*, is chainable.
     def renderer(r : Renderer) : Style
       copy_with(renderer: r)
+    end
+
+    # Sets a *block* applied to the assembled content at render time, before tab expansion or any styling.
+    # Returns a new Style.
+    def transform(&block : String -> String) : Style
+      copy_with(transform: block)
+    end
+
+    # The render-time content transform, or `nil` when unset.
+    def transform : Transform?
+      @transform
+    end
+
+    # True when a transform has been explicitly set.
+    def transform_set? : Bool
+      !@transform.nil?
+    end
+
+    # Returns a new Style with the transform removed.
+    def unset_transform : Style
+      copy_with(transform: nil)
     end
 
     # Renders *strings* through this style's rules, each line is styled independently:
