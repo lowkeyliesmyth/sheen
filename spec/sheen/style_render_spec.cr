@@ -266,3 +266,41 @@ describe "Sheen::Style render delegation" do
     style.bold.string("hi").to_s.should eq("\e[1mhi\e[0m")
   end
 end
+
+describe "Sheen::StylePainter#render - transform" do
+  it "applies a transform tot he assembled content" do
+    render(style.transform(&.upcase), "hi").should eq("HI")
+  end
+
+  it "runs the transform before the SGR wrap" do
+    render(style.bold.transform(&.upcase), "hi").should eq("\e[1mHI\e[0m")
+  end
+
+  it "transforms the joined value and arguments together" do
+    render(style.string("a").transform(&.upcase), "b").should eq("A B")
+  end
+end
+
+describe "Sheen::StylePainter#render - space styling" do
+  it "styles each run individually under plain underline, including spaces" do
+    render(style.underline, "a b").should eq("\e[4ma\e[0m\e[4m \e[0m\e[4mb\e[0m")
+  end
+
+  it "leaves spaces unstyled when underline_spaces is off" do
+    render(style.underline.underline_spaces(false), "a b").should eq("\e[4ma\e[0m \e[4mb\e[0m")
+  end
+
+  it "leaves spaces unstyled when strikethrough_spaces is off" do
+    render(style.strikethrough.strikethrough_spaces(false), "a b").should eq("\e[9ma\e[0m \e[9mb\e[0m")
+  end
+
+  it "stops the background from bleeding into fill when color_whitespace is set to off" do
+    render(style.width(4).background(Sheen::RED).color_whitespace(false), "hi")
+      .should eq("\e[41mhi\e[0m  ")
+  end
+
+  it "carries the foreground into reverse fill" do
+    render(style.width(4).reverse.foreground(Sheen::RED), "hi")
+      .should eq("\e[7;31mhi\e[0m\e[7;31m  \e[0m")
+  end
+end

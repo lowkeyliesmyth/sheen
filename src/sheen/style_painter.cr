@@ -15,11 +15,16 @@ module Sheen
       @style.renderer
     end
 
-    # Renders *strings* through the bound style. Joins bound content, normalizes, applies the SGR core, shapes the block (padding, heigh, alignment, border, margins), then applies width+height limits.
+    # Renders *strings* through the bound style. Joins bound content, applies transforms, normalizes, applies the SGR core, shapes the block (padding, heigh, alignment, border, margins), then applies width+height limits.
     def render(strings : Array(String)) : String
       parts = strings.dup
       parts.unshift(@style.value) unless @style.value.empty?
       content = parts.join(' ')
+
+      # A transform runs on the fully assembled content first, ahead of any normalization
+      if fn = @style.transform
+        content = fn.call(content)
+      end
 
       # pre-styling normalization order: tabs -> CRLF -> inline -> wrap
       content = expand_tabs(content)
@@ -29,7 +34,7 @@ module Sheen
         content = Foundation.wrap(content, @style.width - @style.horizontal_padding, "")
       end
 
-      content = apply_sequence(sgr_sequence, content)
+      content = apply_core(content)
 
       # post-styling block shaping order: padding -> height -> align -> border -> margins
       content = apply_padding(content) unless @style.inline?
@@ -84,6 +89,60 @@ module Sheen
           io << '\n' if i < lines.size - 1
         end
       end
+    end
+
+    # Effective (as opposed to raw) "underline spaces": Follows the explicit toggle when set, otherwise follows `underline`.
+    private def spaces_underlined? : Bool
+      @style.underline_spaces_set? ? @style.underline_spaces? : @style.underline?
+    end
+
+    # Effective (as opposed to raw) "strikethrough spaces": Follows the explicit toggle when set, otherwise follows `strikethrough`.
+    private def spaces_struck? : Bool
+      @style.strikethrough_spaces_set? ? @style.strikethrough_spaces? : @style.strikethrough?
+    end
+
+    # Effective (as opposed to raw) "color whitespace": Follows the explicit toggle when set, otherwise true.
+    private def whitespace_colored? : Bool
+      @style.color_whitespace_set? ? @style.color_whitespace? : true
+    end
+
+    # True when spaces must be styled separately from the surrounding text. Eg decoration should, or should not, extend across them.
+    private def use_space_styler? : Bool
+      (@style.underline? && !spaces_underlined?) ||
+        (@style.strikethrough? && !spaces_struck?) ||
+        spaces_underlined? || spaces_struck?
+    end
+
+    # Applies the core text styling to *content*, line by line.
+    #
+    # When spaces need a distinct styler, each rune is styled individually: spaces through the space styler, all others go through the main sequence. Otherwise each whole line is wrapped once as a single entity.
+    private def apply_core(content : String) : String
+      return apply_sequence(sgr_sequence, content) unless use_space_styler?
+
+      text_seq = sgr_sequence
+      space_seq = space_sequence
+      content.split('\n').map do |line|
+        String.build do |io|
+          line.each_char do |chr|
+            io << style_run(chr.whitespace? ? space_seq : text_seq, chr.to_s)
+          end
+        end
+      end.join('\n')
+    end
+
+    # SGR sequence for individual space runes when the space styler is active.
+    # Holds the foreground+background styling plus the space-appropriate styling attributes only (underline + strikethrough).
+    private def space_sequence : String
+      builder = Foundation::Style.new
+      if @style.foreground_set? && (fg = @style.foreground.resolve(renderer))
+        builder.foreground(fg)
+      end
+      if @style.background_set? && (bg = @style.background.resolve(renderer))
+        builder.background(bg)
+      end
+      builder.underline if spaces_underlined?
+      builder.strikethrough if spaces_struck?
+      builder.to_s
     end
 
     # Adds left/right then top/bottom padding around already-styled *content*.
@@ -141,14 +200,19 @@ module Sheen
     end
 
     # SGR sequence used to style inserted padding/alignment fill whitespace.
-    # Only targets attributes that affect blank cells, specificaly `reverse` and `background`.
+    # Only targets attributes that affect blank cells: `reverse` and `background`.
+    # - reverse whenever the style is reversed
+    # - foreground only under reverse
+    # - background only when color_whitespace is on
     private def whitespace_sequence : String
       builder = Foundation::Style.new
       builder.reverse if @style.reverse?
-      if @style.background_set?
-        if bg = @style.background.try &.resolve(renderer)
-          builder.background(bg)
-        end
+      if @style.reverse? && @style.foreground_set? && (fg = @style.foreground.resolve(renderer))
+        builder.foreground(fg)
+      end
+
+      if whitespace_colored? && @style.background_set? && (bg = @style.background.resolve(renderer))
+        builder.background(bg)
       end
       builder.to_s
     end
