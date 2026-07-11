@@ -124,8 +124,8 @@ module Foundation
   def self.parse_sgr(string : String) : Attributes # ameba:disable Metrics/CyclomaticComplexity
     flags = SGRFlags::None
     underline = nil.as(Underline?)
-    fg = nil.as(SGRColor?)
-    bg = nil.as(SGRColor?)
+    fg : SGRColor? = nil
+    bg : SGRColor? = nil
     reset = false
     unknown = [] of String
 
