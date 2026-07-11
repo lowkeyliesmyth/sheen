@@ -1,3 +1,5 @@
+# TLDR; What functionality is in here?
+# Terminal color-capability policy: decides how many colors an output supports and how to map an RGB value into that space.
 require "./ansi"
 require "./color_space"
 require "./palette"

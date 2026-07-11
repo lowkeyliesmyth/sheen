@@ -1,3 +1,6 @@
+# TLDR; What functionality is in here?
+# Rendering context: holds the detected color profile and background darkness for the lifetime of an output target.
+
 require "../foundation"
 
 module Sheen
@@ -23,7 +26,7 @@ module Sheen
 
     # Detects if the terminal background is dark, caching the result on first read.
     #
-    # Explicitly override with `has_dark_background`
+    # An explicit `has_dark_background=` always wins over implicit detection.
     def has_dark_background? : Bool
       bg = @has_dark_background
       return bg unless bg.nil?

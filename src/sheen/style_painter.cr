@@ -1,3 +1,5 @@
+# TLDR; What functionality is in here?
+# Style execution engine: runs the ordered Style pipeline from raw content through styled text to a fully shaped block.
 require "../foundation"
 require "./position"
 require "./renderer"
@@ -15,7 +17,7 @@ module Sheen
       @style.renderer
     end
 
-    # Renders *strings* through the bound style. Joins bound content, applies transforms, normalizes, applies the SGR core, shapes the block (padding, heigh, alignment, border, margins), then applies width+height limits.
+    # Renders *strings* through the bound style. Joins bound content, applies transforms, normalizes, applies the SGR core, shapes the block (padding, height, alignment, border, margins), then applies width+height limits.
     def render(strings : Array(String)) : String
       parts = strings.dup
       parts.unshift(@style.value) unless @style.value.empty?

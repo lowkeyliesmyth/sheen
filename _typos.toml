@@ -1,0 +1,6 @@
+[default.extend-words]
+# Intentionally split words during testing
+hel = "hel"
+
+[files]
+extend-exclude = ["data/*/*.txt"]

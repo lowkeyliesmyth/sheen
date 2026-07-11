@@ -1,3 +1,6 @@
+# TLDR; What functionality is in here?
+# Style rule data object: the immutable, fluent API that captures every visual setting and produces a configured painter.
+
 require "../foundation"
 require "./border"
 require "./color"
@@ -15,7 +18,7 @@ module Sheen
     # Sentinel for `#tab_width` that disables tab conversion wholesale.
     NO_TAB_CONVERSION = -1
 
-    # Content trnasform applied at render time, before styling time.
+    # Content transform applied at render time, before styling time.
     # This alias is used in the `storage` macro to sidestep including a bare `Proc (String, String)?` that would break the macro tuple parsing.
     alias Transform = String -> String
 
@@ -249,7 +252,7 @@ module Sheen
     #
     # Note:
     # - Inheriting a background also seeds the margin background when neither style has one set.
-    # - Padding, margins, and the bound string value are the exceptions and are **never** inherited.
+    # - Padding, margins, and the bound string value are the exceptions and are **never** inherited, so those properties are intentionally excluded.
     def inherit(other : Style) : Style
       inherited = self
       {% for name in [
@@ -351,7 +354,7 @@ module Sheen
     # - prefixed with any bound `#string` content
     # - wrapped in SGR sequences assembled from current properties
     # - with colors resolved and downsampled through the attached renderer's profile
-    # - width and heigh truncation is applied last
+    # - width and height truncation is applied last
     def render(*strings : String) : String
       StylePainter.new(self).render(strings.to_a)
     end

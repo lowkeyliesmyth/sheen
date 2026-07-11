@@ -17,7 +17,7 @@ describe "Sheen.has_dark_background?" do
     Sheen.has_dark_background?(IO::Memory.new, IO::Memory.new, {"COLORFGBG" => "15;default;0"}).should be_true
   end
 
-  it "falls back to default for an unparseable COLORFGBG" do
+  it "falls back to default for an unparsable COLORFGBG" do
     Sheen.has_dark_background?(IO::Memory.new, IO::Memory.new, {"COLORFGBG" => "negative ghost rider"}).should be_true
   end
 

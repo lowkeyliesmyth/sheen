@@ -1,3 +1,5 @@
+# TLDR; What functionality is in here?
+# Low-level ANSI escape model: recognizes, strips, and decomposes CSI/OSC/SGR sequences into structured color and attribute state.
 require "./sgr"
 
 module Foundation
@@ -56,7 +58,7 @@ module Foundation
     Strikethrough
   end
 
-  # The decomposed result of parsing one or more SGR seqences. Folding multiple sequences accumulates them.
+  # The decomposed result of parsing one or more SGR sequences. Folding multiple sequences accumulates them.
   #
   # 0 (reset) clears everything seen up to that point.
   record Attributes,

@@ -1,3 +1,6 @@
+# TLDR; What functionality is in here?
+# Terminal color expressions: abstract color values that know how to resolve themselves against a renderer's detected capability.
+
 require "../foundation"
 require "./renderer"
 
@@ -131,7 +134,7 @@ module Sheen
       degrade_index(index, profile)
     end
   rescue ArgumentError
-    # An unparseable hex value resolves to no color
+    # An unparsable hex value resolves to no color
     nil
   end
 

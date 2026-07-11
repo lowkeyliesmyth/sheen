@@ -1,3 +1,5 @@
+# TLDR; What functionality is in here?
+# Border renderer: takes shaped content and draws the configured frame around it, including corners, edges, and per-side colors.
 require "../foundation"
 require "./border"
 require "./color"
@@ -121,7 +123,7 @@ module Sheen
       br : String,
       width : Int32
 
-    # Builds one horizontal edge. Starts with the *left* corner, then *middle* repeated to fill *width*, then *right* corner in an "advance then measure" type loop.
+    # Builds one horizontal edge. Starts with the *left* corner, then *middle* repeated to fill *width*, then the *right* corner. Each fill rune is bound, emitted, and measured before the cursor advances, so a multi-width fill lands exactly on the body width.
     private def render_horizontal_edge(left : String, middle : String, right : String, width : Int32) : String
       middle = " " if middle.empty?
       left_width = Foundation.string_width(left)

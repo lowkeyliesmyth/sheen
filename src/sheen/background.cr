@@ -20,7 +20,7 @@ module Sheen
     true
   end
 
-  # The background color extracted from `COLORFGBG` or nil when the var is absent or unparseable.  The last `;`-separated field is the ANSI background index.
+  # The background color extracted from `COLORFGBG` or nil when the var is absent or unparsable.  The last `;`-separated field is the ANSI background index.
   private def self.background_from_env(env) : Foundation::RGB?
     fgbg = env["COLORFGBG"]?
     return nil unless fgbg && fgbg.includes?(';')

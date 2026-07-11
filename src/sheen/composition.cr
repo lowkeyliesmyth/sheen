@@ -1,3 +1,6 @@
+# TLDR; What functionality is in here?
+# Block layout engine: combines separate rendered blocks through horizontal/vertical joining and placement inside a sized box.
+
 require "../foundation"
 require "./color"
 require "./position"

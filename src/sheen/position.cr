@@ -1,3 +1,6 @@
+# TLDR; What functionality is in here?
+# Position abstraction: a normalized fraction along an axis that alignment and placement operations interpret consistently.
+
 module Sheen
   # A position along an axis, used for alignment, joining, and placement.
   #

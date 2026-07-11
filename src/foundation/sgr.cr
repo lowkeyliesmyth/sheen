@@ -1,3 +1,6 @@
+# TLDR; What functionality is in here?
+# ANSI SGR assembler: accumulates text attributes and colors into a single escape sequence through a chainable builder.
+
 module Foundation
   # Control Sequence Introducer
   CSI         = "\e["

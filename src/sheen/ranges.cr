@@ -1,3 +1,6 @@
+# TLDR; What functionality is in here?
+# Selective styling utilities: applies different styles to specific visible-cell ranges or rune indices of an existing string.
+
 require "../foundation"
 require "./style"
 

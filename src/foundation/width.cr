@@ -1,3 +1,5 @@
+# TLDR; What functionality is in here?
+# String geometry engine: measures, truncates, slices, and wraps visible terminal cells while preserving embedded ANSI escapes.
 require "./ansi"
 require "./unicode/east_asian_width"
 
@@ -244,7 +246,7 @@ module Foundation
   # Wraps *string* to lines of at most *width* visible cells, preferring word boundaries and hard-breaking tokens longer than *width*. Width is measured in terminal cells over grapheme clusters.
   #
   # ANSI escape sequences and OSC8 hyperlinks are preserved across breaks.
-  # A hypen is always a breakpoint, as well as any character in *breakpoints*.
+  # A hyphen is always a breakpoint, as well as any character in *breakpoints*.
   def self.wrap(string : String, width : Int32, breakpoints : String = " -") : String
     return string if width < 1
 

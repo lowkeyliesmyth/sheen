@@ -1,3 +1,6 @@
+# TLDR; What functionality is in here?
+# Border vocabulary: immutable glyph sets for frames and table separators, with named presets for common visual styles.
+
 require "../foundation"
 
 module Sheen

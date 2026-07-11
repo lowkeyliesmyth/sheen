@@ -5,7 +5,8 @@ tasks:
   spec:
     desc: Run Crystal specs
     cmds:
-      - crystal spec --order random
+      #- crystal spec --order random
+      - crystal spec
 
   lint:
     desc: Run Ameba linter

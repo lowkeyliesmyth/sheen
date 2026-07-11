@@ -1,3 +1,6 @@
+# TLDR; What functionality is in here?
+# Color math foundation: converts between sRGB hex values and CIELAB so perceptual distance can be measured.
+
 module Foundation
   # A CIELAB color using D65 reference white. Used for perceptual color distance.
   # References for color constants and calculations for sRGB D65
@@ -18,6 +21,14 @@ module Foundation
   end
 
   # An 8bit sRGB color: the base color value for hex parsing and downsampling.
+  #
+  # ```
+  # rgb = Foundation::RGB.parse("#FF8800")
+  # rgb.r      # => 255
+  # rgb.g      # => 136
+  # rgb.b      # => 0
+  # rgb.to_hex # => "#ff8800"
+  # ```
   struct RGB
     # CIELAB is calculated relative to these XYZ D65 reference white values
     private WHITE_X = 0.95047

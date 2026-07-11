@@ -1,3 +1,6 @@
+# TLDR; What functionality is in here?
+# Static color data: the canonical xterm 256-color lookup table used as the target set when downsampled colors are needed.
+
 require "./color_space"
 
 module Foundation
