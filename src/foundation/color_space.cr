@@ -2,6 +2,12 @@
 # Color math foundation: converts between sRGB hex values and CIELAB so perceptual distance can be measured.
 
 module Foundation
+  # CIELAB is calculated relative to these XYZ D65 reference white values.
+  # Shared by both directions of the sRGB <-> CIELAB conversion.
+  private WHITE_X = 0.95047
+  private WHITE_Y =     1.0
+  private WHITE_Z = 1.08883
+
   # A CIELAB color using D65 reference white. Used for perceptual color distance.
   # References for color constants and calculations for sRGB D65
   # - http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
@@ -18,6 +24,44 @@ module Foundation
     def distance(other : Lab) : Float64
       Math.sqrt((@l - other.l) ** 2 + (@a - other.a) ** 2 + (@b - other.b) ** 2)
     end
+
+    # Inverse of `RGB#to_lab`, converts this CIELAB color back to 8bit sRGB (D65).
+    #
+    # Out-of-gamut Lab values are clamped into the sRGB cube, so this method always returns a valid `RGB` and never raises.
+    # A round-trip may differ by +/-1 per channel because each trip rounds the conversion independently.
+    def to_rgb : RGB
+      fy = (@l + 16.0) / 116.0
+      fx = fy + @a / 500.0
+      fz = fy - @b / 200.0
+
+      # CIELAB -> CIE XYZ (D65)
+      x = lab_f_inv(fx) * WHITE_X
+      y = lab_f_inv(fy) * WHITE_Y
+      z = lab_f_inv(fz) * WHITE_Z
+
+      # CIE XYZ (D65) -> linear sRGB
+      rl = 3.2404542 * x - 1.5371385 * y - 0.4985314 * z
+      gl = -0.9692660 * x + 1.8760108 * y + 0.0415560 * z
+      bl = 0.0556434 * x - 0.2040259 * y + 1.0572252 * z
+
+      RGB.new(delinearize(rl), delinearize(gl), delinearize(bl))
+    end
+
+    # Inverse of `RGB#lab_f`: converts a CIELAB component back to a linear XYZ ratio.
+    private def lab_f_inv(ft : Float64) : Float64
+      cube = ft ** 3
+      cube > 0.008856451679035631 ? cube : (ft - 16.0 / 116.0) / 7.787037037037035
+    end
+
+    # Converts a linearized sRGB channel [0.0, 1.0] back to an 8-bit value by
+    # applying the inverse sRGB gamma curve (i.e. re-introducing the nonlinear
+    # encoding that was removed by linearization), clamping out-of-gamut input
+    # into range first.
+    private def delinearize(channel : Float64) : UInt8
+      c = channel.clamp(0.0, 1.0)
+      v = c <= 0.0031308 ? c * 12.92 : 1.055 * (c ** (1.0 / 2.4)) - 0.055
+      (v * 255.0).round.clamp(0.0, 255.0).to_u8
+    end
   end
 
   # An 8bit sRGB color: the base color value for hex parsing and downsampling.
@@ -30,11 +74,6 @@ module Foundation
   # rgb.to_hex # => "#ff8800"
   # ```
   struct RGB
-    # CIELAB is calculated relative to these XYZ D65 reference white values
-    private WHITE_X = 0.95047
-    private WHITE_Y =     1.0
-    private WHITE_Z = 1.08883
-
     getter r : UInt8
     getter g : UInt8
     getter b : UInt8

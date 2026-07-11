@@ -80,3 +80,39 @@ describe Foundation::RGB do
     end
   end
 end
+
+describe Foundation::Lab do
+  describe "#to_rgb" do
+    it "maps L=100 back to white" do
+      rgb = Foundation::Lab.new(100.0, 0.0, 0.0).to_rgb
+      {rgb.r, rgb.g, rgb.b}.should eq({255_u8, 255_u8, 255_u8})
+    end
+
+    it "maps L=0 back to black" do
+      rgb = Foundation::Lab.new(0.0, 0.0, 0.0).to_rgb
+      {rgb.r, rgb.g, rgb.b}.should eq({0_u8, 0_u8, 0_u8})
+    end
+
+    it "reconstructs sRGB from a reference Lab (red)" do
+      rgb = Foundation::Lab.new(53.24, 80.09, 67.29).to_rgb
+      rgb.r.should be_close(255, 1)
+      rgb.g.should be_close(0, 1)
+      rgb.b.should be_close(0, 1)
+    end
+
+    it "round-trips RGB -> Lab -> RGB within +/-1 per channel" do
+      %w(#000000 #ffffff #ff0000 #7d56f4 #43bf6d #14f9d6).each do |hex|
+        original = Foundation::RGB.parse(hex)
+        result = original.to_lab.to_rgb
+        result.r.should be_close(original.r, 1)
+        result.g.should be_close(original.g, 1)
+        result.b.should be_close(original.b, 1)
+      end
+    end
+
+    it "clamps an out-of-gamut Lab into valid bytes without raising" do
+      rgb = Foundation::Lab.new(50.0, 120.0, -120.0).to_rgb
+      {rgb.r, rgb.g, rgb.b}.all? { |chn| (0_u8..255_u8).includes?(chn) }.should be_true
+    end
+  end
+end
