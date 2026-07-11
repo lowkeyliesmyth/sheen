@@ -21,12 +21,12 @@ module Sheen
       @color_profile = profile
     end
 
-    # Detects if the terminal background is dark
-    # TODO: Defaults to dark until OSC detection is added.
+    # Detects if the terminal background is dark, caching the result on first read.
     #
     # Explicitly override with `has_dark_background`
     def has_dark_background? : Bool
       bg = @has_dark_background
+      return bg unless bg.nil?
       bg.nil? ? (@has_dark_background = true) : bg
     end
 
