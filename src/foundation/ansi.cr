@@ -28,7 +28,7 @@ module Foundation
   # Optional *params* are encoded as k=v pairs joined by ':'.
   #
   # Trust the caller. Caller is responsible for ensuring that *url*  is free of control characters.
-  def self.set_hyperlink(url : String, **params) : String # ameba:disable Naming/AccessorMethodName
+  def self.hyperlink(url : String, **params) : String
     param_str = params.empty? ? "" : params.map { |k, v| "#{k}=#{v}" }.join(':')
     "\e]8;#{param_str};#{url}\e\\"
   end

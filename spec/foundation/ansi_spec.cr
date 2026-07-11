@@ -30,28 +30,28 @@ describe "#strip" do
   end
 end
 
-describe "#set_hyperlink" do
+describe "#hyperlink" do
   it "wraps a URL with no params" do
-    Foundation.set_hyperlink("https://example.com").should eq("\e]8;;https://example.com\e\\")
+    Foundation.hyperlink("https://example.com").should eq("\e]8;;https://example.com\e\\")
   end
 
   it "encodes a single id param" do
-    Foundation.set_hyperlink("https://example.com", id: "abc").should eq("\e]8;id=abc;https://example.com\e\\")
+    Foundation.hyperlink("https://example.com", id: "abc").should eq("\e]8;id=abc;https://example.com\e\\")
   end
 
   it "joins multiple params with :" do
-    result = Foundation.set_hyperlink("https://example.com", id: "abc", title: "Example")
+    result = Foundation.hyperlink("https://example.com", id: "abc", title: "Example")
     result.should eq("\e]8;id=abc:title=Example;https://example.com\e\\")
   end
 
   it "accepts an empty URL" do
-    Foundation.set_hyperlink("").should eq("\e]8;;\e\\")
+    Foundation.hyperlink("").should eq("\e]8;;\e\\")
   end
 
   describe "RESET_HYPERLINK constant" do
     it "matches an empty-params, empty-url hyperlink sequence" do
       Foundation::RESET_HYPERLINK.should eq("\e]8;;\e\\")
-      Foundation::RESET_HYPERLINK.should eq(Foundation.set_hyperlink(""))
+      Foundation::RESET_HYPERLINK.should eq(Foundation.hyperlink(""))
     end
   end
 
