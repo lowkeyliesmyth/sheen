@@ -129,7 +129,7 @@ module Foundation
     end
 
     # Sets a truecolor bg (SGR 48;2;*r*;*g*;*b*)
-    def background_rgb(r, g, b : UInt8) : self
+    def background_rgb(r : UInt8, g : UInt8, b : UInt8) : self
       @params << "48;2;#{r};#{g};#{b}"
       self
     end
