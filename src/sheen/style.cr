@@ -631,6 +631,13 @@ module Sheen
         @style = Style.new(renderer)
       end
 
+      # `Style#transform` captures its block as a proc, so it needs an explicit forwarder defined here in Builder.
+      # Otherwise `Builder#method_missing` can't forward the block to `Style#transform` because it rewrites a forwarded block into `yield`, which is illegal inside a captured block.
+      def transform(&block : String -> String) : self
+        @style = @style.transform(&block)
+        self
+      end
+
       # Forward any setter call to the wrapped Style, storing the new Style.
       macro method_missing(call)
         @style = @style.{{call}}
