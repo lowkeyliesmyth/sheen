@@ -146,6 +146,25 @@ module Foundation
       to_lab.distance(other.to_lab)
     end
 
+    # Blends toward *other* through CIELAB, returning the interpolated s*RGB* color.
+    #
+    # *t* is the mix fraction clamped to 0.0..1.0, where `t == 0.0` returns `self` and `t == 1.0` returns `other`.
+    # Blending in Lab rather than sRGB keeps the gradient perceptually even.
+    def blend(other : RGB, t : Float64) : RGB
+      amount = t.clamp(0.0, 1.0)
+      # Return the endpoints exactly. a to_lab/to_rgb round-trip is lossy, so short-circuiting is both correct and cheaper.
+      return self if amount == 0.0
+      return other if amount == 1.0
+
+      from = to_lab
+      dest = other.to_lab
+      Lab.new(
+        from.l + (dest.l - from.l) * amount,
+        from.a + (dest.a - from.a) * amount,
+        from.b + (dest.b - from.b) * amount,
+      ).to_rgb
+    end
+
     # Expands an 8-bit sRGB *channel* value (0–255) to a linearized light intensity in [0.0, 1.0], applying the sRGB piecewise transfer function (gamma).
     private def linearize(channel : UInt8) : Float64
       v = channel / 255.0
