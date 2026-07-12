@@ -50,6 +50,18 @@ module Sheen
       end
     end
 
+    macro unset_prop(name)
+      # True when {{name.id}} has been explicitly set
+      def {{name.id}}_set? : Bool
+        !@{{name.id}}.nil?
+      end
+
+      # Returns a new Style with {{name.id}} returned to the unset (inheritable) state.
+      def unset_{{name.id}} : Style
+        copy_with({{name.id}}: nil)
+      end
+    end
+
     # Emits the setters and `?` getter for a boolean property.
     macro bool_prop(name)
       # Enables or disables {{name.id}}.
@@ -63,15 +75,7 @@ module Sheen
         @{{name.id}} == true
       end
 
-      # True when {{name.id}} has been explicitly set.
-      def {{name.id}}_set? : Bool
-        !@{{name.id}}.nil?
-      end
-
-      # Returns a new Style with {{name.id}} returned to the unset (inheritable) state.
-      def unset_{{name.id}} : Style
-        copy_with({{name.id}}: nil)
-      end
+      unset_prop({{name}})
     end
 
     # Emits the setter and getter for a color property.
@@ -89,15 +93,7 @@ module Sheen
         @{{name.id}} || NoColor.new
       end
 
-      # True when {{name.id}} has been explicitly set.
-      def {{name.id}}_set? : Bool
-        !@{{name.id}}.nil?
-      end
-
-      # Returns a new Style with {{name.id}} returned to the unset (inheritable) state.
-      def unset_{{name.id}} : Style
-        copy_with({{name.id}}: nil)
-      end
+      unset_prop({{name}})
     end
 
     # Emits the setter and getter for an Int32 property.
@@ -115,15 +111,7 @@ module Sheen
         @{{name.id}} || 0
       end
 
-      # True when {{name.id}} has been explicitly set.
-      def {{name.id}}_set? : Bool
-        !@{{name.id}}.nil?
-      end
-
-      # Returns a new Style with {{name.id}} returned to the unset (inheritable) state.
-      def unset_{{name.id}} : Style
-        copy_with({{name.id}}: nil)
-      end
+      unset_prop({{name}})
     end
 
     # Emits the setter and getter for a Position property.
@@ -141,15 +129,7 @@ module Sheen
         @{{name.id}} || {{default}}
       end
 
-      # True when {{name.id}} has been explicitly set.
-      def {{name.id}}_set? : Bool
-        !@{{name.id}}.nil?
-      end
-
-      # Returns a new Style with {{name.id}} returned to the unset (inheritable) state.
-      def unset_{{name.id}} : Style
-        copy_with({{name.id}}: nil)
-      end
+      unset_prop({{name}})
     end
 
     # The single source of truth for the property fields. `nil` means unset.
@@ -328,15 +308,7 @@ module Sheen
       copy_with(transform: block)
     end
 
-    # True when a transform has been explicitly set.
-    def transform_set? : Bool
-      !@transform.nil?
-    end
-
-    # Returns a new Style with the transform removed.
-    def unset_transform : Style
-      copy_with(transform: nil)
-    end
+    unset_prop transform
 
     # Renders *strings* through this style's rules, each line is styled independently:
     # - joined by a space
@@ -413,15 +385,7 @@ module Sheen
       @border_style || Border.new
     end
 
-    # True when a border style has been explicitly set.
-    def border_style_set? : Bool
-      !@border_style.nil?
-    end
-
-    # Returns a new Style with the border style removed.
-    def unset_border_style : Style
-      copy_with(border_style: nil)
-    end
+    unset_prop border_style
 
     # Sets the border *b* and which sides show, via CSS-style shorthand.
     # - no *side* values: shows all four
