@@ -68,21 +68,16 @@ module Foundation
       end
     end
 
-    # True when NO_COLOR is present and not overridden by FORCE_COLOR.
+    # True when NO_COLOR is present, is not empty, and is not overridden by FORCE_COLOR.
     private def self.env_no_color?(env) : Bool
-      if (nc = env["NO_COLOR"]?) && !nc.empty?
-        !force_color?(env)
-      else
-        false
-      end
+      return false unless nc = env["NO_COLOR"]?
+      !nc.empty? && !force_color?(env)
     end
 
     # True when FORCE_COLOR is set to a non-"0" value.
     private def self.force_color?(env) : Bool
-      if forced = env["FORCE_COLOR"]?
-        return forced != "0"
-      end
-      false
+      return false unless forced = env["FORCE_COLOR"]?
+      forced != "0"
     end
   end
 
