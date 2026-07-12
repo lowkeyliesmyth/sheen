@@ -123,7 +123,7 @@ module Foundation
   # TODO: Refactor, this is crazy complex fr fr
   def self.parse_sgr(string : String) : Attributes # ameba:disable Metrics/CyclomaticComplexity
     flags = SGRFlags::None
-    underline = nil.as(Underline?)
+    underline : Underline? = nil
     fg : SGRColor? = nil
     bg : SGRColor? = nil
     reset = false
