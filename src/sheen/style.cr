@@ -313,15 +313,9 @@ module Sheen
       copy_with(value: "")
     end
 
-    # The bound content set via `#string`.
-    def value : String
-      @value
-    end
-
-    # Returns the renderer this style is bound to.
-    def renderer : Renderer
-      @renderer
-    end
+    getter value : String
+    getter renderer : Renderer
+    getter transform : Transform?
 
     # Rebinds this style to *r*, is chainable.
     def renderer(r : Renderer) : Style
@@ -332,11 +326,6 @@ module Sheen
     # Returns a new Style.
     def transform(&block : String -> String) : Style
       copy_with(transform: block)
-    end
-
-    # The render-time content transform, or `nil` when unset.
-    def transform : Transform?
-      @transform
     end
 
     # True when a transform has been explicitly set.
