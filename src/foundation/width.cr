@@ -16,20 +16,18 @@ module Foundation
   # - 1 otherwise
   def self.grapheme_width(grapheme : String) : Int32
     return 0 if grapheme.empty?
-    chars = grapheme.chars
 
-    if chars.size == 1
-      ch = chars[0]
+    if grapheme.size == 1
+      ch = grapheme[0]
       return 0 if ch.control? || ch.mark?
     end
 
-    return 2 if chars.any? do |chr|
-                  Unicode.wide?(chr.ord)
-                end
-    return 2 if chars.any? do |chr|
-                  chr.ord == VARIATION_SELECTOR_16
-                end
-    return 2 if chars.size == 2 && chars.all? do |chr|
+    grapheme.each_char do |chr|
+      ord = chr.ord
+      return 2 if Unicode.wide?(ord) || ord == VARIATION_SELECTOR_16
+    end
+
+    return 2 if grapheme.size == 2 && grapheme.each_char.all? do |chr|
                   REGIONAL_INDICATOR.includes?(chr.ord)
                 end
     1

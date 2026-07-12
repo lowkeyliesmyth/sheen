@@ -28,7 +28,7 @@ module Foundation
   # Optional *params* are encoded as k=v pairs joined by ':'.
   #
   # Trust the caller. Caller is responsible for ensuring that *url*  is free of control characters.
-  def self.set_hyperlink(url : String, **params) : String # ameba:disable Naming/AccessorMethodName
+  def self.hyperlink(url : String, **params) : String
     param_str = params.empty? ? "" : params.map { |k, v| "#{k}=#{v}" }.join(':')
     "\e]8;#{param_str};#{url}\e\\"
   end
@@ -103,13 +103,13 @@ module Foundation
     # Emits an SGR color sequence for *color* to *style*, targeting foreground or background based on *foreground*.
     private def emit_color(style : Style, color : SGRColor, foreground : Bool) : Nil
       case color
-      when BasicColor
+      in BasicColor
         foreground ? style.foreground_basic(color.index) : style.background_basic(color.index)
-      when IndexedColor
+      in IndexedColor
         foreground ? style.foreground_indexed(color.index) : style.background_indexed(color.index)
-      when RGBColor
+      in RGBColor
         foreground ? style.foreground_rgb(color.r, color.g, color.b) : style.background_rgb(color.r, color.g, color.b)
-      when DefaultColor
+      in DefaultColor
         foreground ? style.default_foreground : style.default_background
       end
     end
@@ -123,9 +123,9 @@ module Foundation
   # TODO: Refactor, this is crazy complex fr fr
   def self.parse_sgr(string : String) : Attributes # ameba:disable Metrics/CyclomaticComplexity
     flags = SGRFlags::None
-    underline = nil.as(Underline?)
-    fg = nil.as(SGRColor?)
-    bg = nil.as(SGRColor?)
+    underline : Underline? = nil
+    fg : SGRColor? = nil
+    bg : SGRColor? = nil
     reset = false
     unknown = [] of String
 
@@ -195,9 +195,10 @@ module Foundation
     Attributes.new(flags, underline, fg, bg, reset, unknown)
   end
 
-  # Reads an extended color introducer (`38`/`48`) and its sub-parameters.
+  # Parses the extended color sequence (`38`/`48`) starting at *tokens[i]*, reading its `5;n` (indexed) or `2;r;g;b` (RGB) sub-parameters.
   #
-  # Returns the color plus how many tokens it spans, or `nil` if malformed.
+  # Returns a tuple of the parsed `SGRColor` and the number of tokens consumed (including the introducer), or `nil` if the sub-parameters are missing or malformed.
+
   private def self.consume_extended_color(tokens : Array(String), i : Int32) : Tuple(SGRColor, Int32)?
     case tokens[i + 1]?
     when "5"

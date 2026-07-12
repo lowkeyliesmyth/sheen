@@ -12,17 +12,13 @@ module Foundation
   # References for color constants and calculations for sRGB D65
   # - http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
   # - https://github.com/lucasb-eyer/go-colorful/blob/master/colors.go
-  struct Lab
-    getter l : Float64
-    getter a : Float64
-    getter b : Float64
-
-    def initialize(@l : Float64, @a : Float64, @b : Float64)
-    end
-
+  record Lab,
+    l : Float64,
+    a : Float64,
+    b : Float64 do
     # ΔE76: the Euclidean distance between two Lab colors. Larger is more perceptually different.
     def distance(other : Lab) : Float64
-      Math.sqrt((@l - other.l) ** 2 + (@a - other.a) ** 2 + (@b - other.b) ** 2)
+      Math.sqrt((l - other.l) ** 2 + (a - other.a) ** 2 + (b - other.b) ** 2)
     end
 
     # Inverse of `RGB#to_lab`, converts this CIELAB color back to 8bit sRGB (D65).
@@ -30,9 +26,9 @@ module Foundation
     # Out-of-gamut Lab values are clamped into the sRGB cube, so this method always returns a valid `RGB` and never raises.
     # A round-trip may differ by +/-1 per channel because each trip rounds the conversion independently.
     def to_rgb : RGB
-      fy = (@l + 16.0) / 116.0
-      fx = fy + @a / 500.0
-      fz = fy - @b / 200.0
+      fy = (l + 16.0) / 116.0
+      fx = fy + a / 500.0
+      fz = fy - b / 200.0
 
       # CIELAB -> CIE XYZ (D65)
       x = lab_f_inv(fx) * WHITE_X
@@ -151,7 +147,9 @@ module Foundation
       v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
     end
 
-    # Applies the CIE standard piecewise cube-root nonlinearity to a normalized XYZ component *t*, returning the linearized value for use in CIELAB conversion.
+    # Converts a normalized XYZ component *t* into the value used by the CIELAB formulas. This is one step of the XYZ -> CIELAB conversion.
+    # For values above a small threshold it takes the cube root.
+    # For smaller values it falls back to a linear approximation to avoid the cube root's steep slope near zero.
     private def lab_f(t : Float64) : Float64
       t > 0.008856451679035631 ? Math.cbrt(t) : 7.787037037037035 * t + 16.0 / 116.0
     end
