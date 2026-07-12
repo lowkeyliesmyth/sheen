@@ -50,6 +50,18 @@ module Sheen
       end
     end
 
+    macro unset_prop(name)
+      # True when {{name.id}} has been explicitly set
+      def {{name.id}}_set? : Bool
+        !@{{name.id}}.nil?
+      end
+
+      # Returns a new Style with {{name.id}} returned to the unset (inheritable) state.
+      def unset_{{name.id}} : Style
+        copy_with({{name.id}}: nil)
+      end
+    end
+
     # Emits the setters and `?` getter for a boolean property.
     macro bool_prop(name)
       # Enables or disables {{name.id}}.
@@ -63,15 +75,7 @@ module Sheen
         @{{name.id}} == true
       end
 
-      # True when {{name.id}} has been explicitly set.
-      def {{name.id}}_set? : Bool
-        !@{{name.id}}.nil?
-      end
-
-      # Returns a new Style with {{name.id}} returned to the unset (inheritable) state.
-      def unset_{{name.id}} : Style
-        copy_with({{name.id}}: nil)
-      end
+      unset_prop({{name}})
     end
 
     # Emits the setter and getter for a color property.
@@ -89,15 +93,7 @@ module Sheen
         @{{name.id}} || NoColor.new
       end
 
-      # True when {{name.id}} has been explicitly set.
-      def {{name.id}}_set? : Bool
-        !@{{name.id}}.nil?
-      end
-
-      # Returns a new Style with {{name.id}} returned to the unset (inheritable) state.
-      def unset_{{name.id}} : Style
-        copy_with({{name.id}}: nil)
-      end
+      unset_prop({{name}})
     end
 
     # Emits the setter and getter for an Int32 property.
@@ -115,15 +111,7 @@ module Sheen
         @{{name.id}} || 0
       end
 
-      # True when {{name.id}} has been explicitly set.
-      def {{name.id}}_set? : Bool
-        !@{{name.id}}.nil?
-      end
-
-      # Returns a new Style with {{name.id}} returned to the unset (inheritable) state.
-      def unset_{{name.id}} : Style
-        copy_with({{name.id}}: nil)
-      end
+      unset_prop({{name}})
     end
 
     # Emits the setter and getter for a Position property.
@@ -141,15 +129,7 @@ module Sheen
         @{{name.id}} || {{default}}
       end
 
-      # True when {{name.id}} has been explicitly set.
-      def {{name.id}}_set? : Bool
-        !@{{name.id}}.nil?
-      end
-
-      # Returns a new Style with {{name.id}} returned to the unset (inheritable) state.
-      def unset_{{name.id}} : Style
-        copy_with({{name.id}}: nil)
-      end
+      unset_prop({{name}})
     end
 
     # The single source of truth for the property fields. `nil` means unset.
@@ -313,15 +293,9 @@ module Sheen
       copy_with(value: "")
     end
 
-    # The bound content set via `#string`.
-    def value : String
-      @value
-    end
-
-    # Returns the renderer this style is bound to.
-    def renderer : Renderer
-      @renderer
-    end
+    getter value : String
+    getter renderer : Renderer
+    getter transform : Transform?
 
     # Rebinds this style to *r*, is chainable.
     def renderer(r : Renderer) : Style
@@ -334,20 +308,7 @@ module Sheen
       copy_with(transform: block)
     end
 
-    # The render-time content transform, or `nil` when unset.
-    def transform : Transform?
-      @transform
-    end
-
-    # True when a transform has been explicitly set.
-    def transform_set? : Bool
-      !@transform.nil?
-    end
-
-    # Returns a new Style with the transform removed.
-    def unset_transform : Style
-      copy_with(transform: nil)
-    end
+    unset_prop transform
 
     # Renders *strings* through this style's rules, each line is styled independently:
     # - joined by a space
@@ -359,9 +320,16 @@ module Sheen
       StylePainter.new(self).render(strings.to_a)
     end
 
+    # :ditto:
+    # Zero-arg convenience version that renders this style's bound `#string` content with no additional arguments.
+    def render : String
+      StylePainter.new(self).render([] of String)
+    end
+
     # Renders the bound `#string` content.
+    # Writes the result of `#render` (this style's bound `#string` content) to *io*.
     def to_s(io : IO) : Nil
-      io << StylePainter.new(self).render([] of String)
+      io << render
     end
 
     # Sets padding via CSS shorthand:
@@ -424,15 +392,7 @@ module Sheen
       @border_style || Border.new
     end
 
-    # True when a border style has been explicitly set.
-    def border_style_set? : Bool
-      !@border_style.nil?
-    end
-
-    # Returns a new Style with the border style removed.
-    def unset_border_style : Style
-      copy_with(border_style: nil)
-    end
+    unset_prop border_style
 
     # Sets the border *b* and which sides show, via CSS-style shorthand.
     # - no *side* values: shows all four
@@ -441,7 +401,7 @@ module Sheen
     # - 3 *side* values: top, horiz, bottom
     # - 4 *side* values: top, right, bottom, left
     def border(b : Border, *sides : Bool) : Style
-      top, right, bottom, left = which_sides_bool(sides.to_a)
+      top, right, bottom, left = expand_sides(sides.to_a)
       copy_with(
         border_style: b,
         border_top: top, border_right: right, border_bottom: bottom, border_left: left,
@@ -591,21 +551,6 @@ module Sheen
     # Getter for the {horizontal, vertical} frame size
     def frame_size : {Int32, Int32}
       {horizontal_frame_size, vertical_frame_size}
-    end
-
-    # Expands CSS shorthand *sides* toggles to `{top, right, bottom, left}`.
-    # No *sides* value provided means implicit "show them all".
-    # 1-4 *sides* provided follows the same shorthand as `#padding`.
-    # Raises when *sides*.size values provided is more than 4.
-    private def which_sides_bool(sides : Array(Bool)) : {Bool, Bool, Bool, Bool}
-      case sides.size
-      when 0 then {true, true, true, true}
-      when 1 then {sides[0], sides[0], sides[0], sides[0]}
-      when 2 then {sides[0], sides[1], sides[0], sides[1]}
-      when 3 then {sides[0], sides[1], sides[2], sides[1]}
-      when 4 then {sides[0], sides[1], sides[2], sides[3]}
-      else        raise ArgumentError.new("border accepts 0-4 side values, got #{sides.size}")
-      end
     end
 
     # Expands CSS-shorthand *values* to `{top, right, bottom, left}`.
