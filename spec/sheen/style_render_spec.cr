@@ -265,6 +265,15 @@ describe "Sheen::Style render delegation" do
   it "renders bound content through Style#to_s" do
     style.bold.string("hi").to_s.should eq("\e[1mhi\e[0m")
   end
+
+  it "renders boud #string content with no arguments" do
+    style.bold.string("hi").render.should eq("\e[1mhi\e[0m")
+  end
+
+  it "renders bound content identically to #to_s" do
+    sty = style.bold.string("hi")
+    sty.render.should eq(sty.to_s)
+  end
 end
 
 describe "Sheen::StylePainter#render - transform" do

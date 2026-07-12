@@ -320,9 +320,16 @@ module Sheen
       StylePainter.new(self).render(strings.to_a)
     end
 
+    # :ditto:
+    # Zero-arg convenience version that renders this style's bound `#string` content with no additional arguments.
+    def render : String
+      StylePainter.new(self).render([] of String)
+    end
+
     # Renders the bound `#string` content.
+    # Writes the result of `#render` (this style's bound `#string` content) to *io*.
     def to_s(io : IO) : Nil
-      io << StylePainter.new(self).render([] of String)
+      io << render
     end
 
     # Sets padding via CSS shorthand:
