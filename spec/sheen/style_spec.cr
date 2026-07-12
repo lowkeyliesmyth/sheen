@@ -76,10 +76,16 @@ describe Sheen::Style do
     end
 
     it "chains within the block" do
-      # ameba:disable Style/VerboseBlock
-      built = Sheen.style { |sty| sty.bold.italic.max_width(8) }
+      built = Sheen.style(&.bold.italic.max_width(8))
       built.italic?.should be_true
       built.max_width.should eq(8)
+    end
+
+    it "forwards a block-taking setter to the wrapped Style" do
+      built = Sheen.style { |sty| sty.bold.transform(&.upcase) }
+      built.bold?.should be_true
+      built.transform_set?.should be_true
+      built.transform.not_nil!.call("hi").should eq("HI") # ameba:disable Lint/NotNil
     end
   end
 end

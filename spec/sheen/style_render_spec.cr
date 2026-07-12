@@ -268,7 +268,7 @@ describe "Sheen::Style render delegation" do
 end
 
 describe "Sheen::StylePainter#render - transform" do
-  it "applies a transform tot he assembled content" do
+  it "applies a transform to the assembled content" do
     render(style.transform(&.upcase), "hi").should eq("HI")
   end
 
@@ -278,6 +278,11 @@ describe "Sheen::StylePainter#render - transform" do
 
   it "transforms the joined value and arguments together" do
     render(style.string("a").transform(&.upcase), "b").should eq("A B")
+  end
+
+  it "applies a transform set through the Sheen.style builder" do
+    built = Sheen.style(renderer(Foundation::Profile::TrueColor)) { |sty| sty.bold.transform(&.upcase) }
+    render(built, "hi").should eq("\e[1mHI\e[0m")
   end
 end
 
