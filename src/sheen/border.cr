@@ -10,6 +10,9 @@ module Sheen
   # - interior cross pieces used by tables
   #
   # A Border whose pieces are all empty is a "none" Border.
+  #
+  # Meta: Reopened so these methods live outside the `record` macro block but are still attached to the same struct.
+  # Why do this? Because the `crystal docs` commands' `wants_doc` parser chokes on method docstring comments under the `record` macro.
   record Border,
     top : String = "",
     bottom : String = "",
@@ -23,7 +26,9 @@ module Sheen
     middle_right : String = "",
     middle : String = "",
     middle_top : String = "",
-    middle_bottom : String = "" do
+    middle_bottom : String = ""
+
+  struct Border
     # True when no border piece is set. You get a none Border.
     def none? : Bool
       self == Border.new
