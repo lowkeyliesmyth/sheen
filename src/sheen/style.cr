@@ -441,7 +441,7 @@ module Sheen
     # - 3 *side* values: top, horiz, bottom
     # - 4 *side* values: top, right, bottom, left
     def border(b : Border, *sides : Bool) : Style
-      top, right, bottom, left = which_sides_bool(sides.to_a)
+      top, right, bottom, left = expand_sides(sides.to_a)
       copy_with(
         border_style: b,
         border_top: top, border_right: right, border_bottom: bottom, border_left: left,
@@ -591,21 +591,6 @@ module Sheen
     # Getter for the {horizontal, vertical} frame size
     def frame_size : {Int32, Int32}
       {horizontal_frame_size, vertical_frame_size}
-    end
-
-    # Expands CSS shorthand *sides* toggles to `{top, right, bottom, left}`.
-    # No *sides* value provided means implicit "show them all".
-    # 1-4 *sides* provided follows the same shorthand as `#padding`.
-    # Raises when *sides*.size values provided is more than 4.
-    private def which_sides_bool(sides : Array(Bool)) : {Bool, Bool, Bool, Bool}
-      case sides.size
-      when 0 then {true, true, true, true}
-      when 1 then {sides[0], sides[0], sides[0], sides[0]}
-      when 2 then {sides[0], sides[1], sides[0], sides[1]}
-      when 3 then {sides[0], sides[1], sides[2], sides[1]}
-      when 4 then {sides[0], sides[1], sides[2], sides[3]}
-      else        raise ArgumentError.new("border accepts 0-4 side values, got #{sides.size}")
-      end
     end
 
     # Expands CSS-shorthand *values* to `{top, right, bottom, left}`.
