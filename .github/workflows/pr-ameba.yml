@@ -30,8 +30,8 @@ jobs:
           path: |
             lib
             bin/ameba
-          # cache invalidates when any shard dependencies change or crystal version changes
-          key: ameba-${{ runner.os }}-crystal-${{ env.CRYSTAL_VERSION }}-${{ hashFiles('shard.lock') }}
+          # cache invalidates when any shard dependencies change or crystal version changes. Cache on shard.yml because library shards don't get their shard.lock file committed.
+          key: ameba-${{ runner.os }}-crystal-${{ env.CRYSTAL_VERSION }}-${{ hashFiles('shard.yml') }}
 
       - name: Install shards
         if: steps.cache.outputs.cache-hit != 'true'
