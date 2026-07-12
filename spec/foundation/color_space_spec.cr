@@ -79,6 +79,37 @@ describe Foundation::RGB do
       (target.distance(near) < target.distance(far)).should be_true
     end
   end
+
+  describe "#blend" do
+    it "returns self exactly at t = 0.0" do
+      red = Foundation::RGB.parse("#ff0000")
+      blue = Foundation::RGB.parse("#0000ff")
+      red.blend(blue, 0.0).should eq(red)
+    end
+
+    it "returns other exactly at t = 1.0" do
+      red = Foundation::RGB.parse("#ff0000")
+      blue = Foundation::RGB.parse("#0000ff")
+      red.blend(blue, 1.0).should eq(blue)
+    end
+
+    it "blends black and white to a perceptual mid-gray at t = 0.5" do
+      black = Foundation::RGB.new(0_u8, 0_u8, 0_u8)
+      white = Foundation::RGB.new(255_u8, 255_u8, 255_u8)
+      mid = black.blend(white, 0.5)
+      # L*=50 gray is ~119, not a simple average of 128.
+      mid.r.should be_close(119, 2)
+      mid.g.should be_close(119, 2)
+      mid.b.should be_close(119, 2)
+    end
+
+    it "clamps t below 0 and above 1 rather than raising" do
+      red = Foundation::RGB.parse("#ff0000")
+      blue = Foundation::RGB.parse("#0000ff")
+      red.blend(blue, -0.5).should eq(red)
+      red.blend(blue, 1.5).should eq(blue)
+    end
+  end
 end
 
 describe Foundation::Lab do
