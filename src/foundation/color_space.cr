@@ -10,12 +10,17 @@ module Foundation
 
   # A CIELAB color using D65 reference white. Used for perceptual color distance.
   # References for color constants and calculations for sRGB D65
-  # - http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
-  # - https://github.com/lucasb-eyer/go-colorful/blob/master/colors.go
+  # - [http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html](http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html)
+  # - [https://github.com/lucasb-eyer/go-colorful/blob/master/colors.go](https://github.com/lucasb-eyer/go-colorful/blob/master/colors.go)
+  #
+  # Meta: Reopened so these methods live outside the `record` macro block but are still attached to the same struct.
+  # Why do this? Because the `crystal docs` commands' `wants_doc` parser chokes on method docstring comments under the `record` macro.
   record Lab,
     l : Float64,
     a : Float64,
-    b : Float64 do
+    b : Float64
+
+  struct Lab
     # ΔE76: the Euclidean distance between two Lab colors. Larger is more perceptually different.
     def distance(other : Lab) : Float64
       Math.sqrt((l - other.l) ** 2 + (a - other.a) ** 2 + (b - other.b) ** 2)
