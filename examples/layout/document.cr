@@ -9,12 +9,12 @@ module Examples
     # Assembles the doc.
     def self.render : String
       String.build do |io|
-        io << color_grid_selection
+        io << color_grid_section
       end
     end
 
     # A 14x8 gradient swatch block. Each cell is two spaces of bg.
-    private def self.color_grid_selection
+    private def self.color_grid_section : String
       String.build do |io|
         color_grid(14, 8).each do |row|
           row.each { |hex| io << Sheen::Style.new.background(Sheen.color(hex)).render("  ") }
