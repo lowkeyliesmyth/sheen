@@ -28,6 +28,21 @@ tasks:
     cmds:
       - crystal run scripts/gen_unicode.cr
 
+  example:
+    desc: Render one example to STDOUT (task example -- <name>)
+    cmds:
+      - crystal run examples/main.cr -- {{.CLI_ARGS}}
+
+  examples:
+    desc: Render every example to STDOUT
+    cmds:
+      - crystal run examples/main.cr -- all
+
+  golden:update:
+    desc: Regenerate the on-disk golden files for TrueColor examples
+    cmds:
+      - crystal run scripts/update_goldens.cr
+
   default:
     desc: Run default spec-lint checks
     deps: [spec, lint]
