@@ -34,4 +34,4 @@ end
 
 # Example reference implementations self-register on require. Add one line per example reference.
 #
-# eg require "./layout/document"
+require "./layout/document"
