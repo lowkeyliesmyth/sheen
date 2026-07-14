@@ -38,10 +38,10 @@ tasks:
     cmds:
       - crystal run examples/main.cr -- all
 
-  golden:update:
-    desc: Regenerate the on-disk golden files for TrueColor examples
+  examples:check:
+    desc: Type-check example consumers without running them
     cmds:
-      - crystal run scripts/update_goldens.cr
+      - crystal build examples/main.cr --no-codegen
 
   default:
     desc: Run default spec-lint checks

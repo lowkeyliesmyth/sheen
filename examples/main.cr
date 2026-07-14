@@ -1,6 +1,6 @@
 require "./examples"
 
-# CLI disptcher for the reference Sheen consumer examples.
+# CLI dispatcher for the reference Sheen consumer examples.
 # Renders one named example to STDOUT through the process-global renderer so it honors the detected color profile.
 #
 # Usage: `crystal run examples/main.cr -- <example>`

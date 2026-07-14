@@ -1,19 +1,19 @@
 require "../src/sheen"
 
-# Reference consumers of Sheen, also functoining as a full e2e acceptance test.
+# Reference consumers of Sheen, also functioning as a full e2e acceptance test.
 # Each example consumer is a pure function registered by name so it can be run from the CLI and asserted on in specs.
 
-class Examples
+module Examples
   class UnknownExample < Exception
     def initialize(name : String, available : Array(String))
       super("unknown example #{name.inspect}. available examples: #{available.join(", ")}")
     end
   end
 
-  @@registry = {} of String => Sheen::Renderer -> String
+  @@registry = {} of String => Proc(String)
 
   # Registers *block* as the example named *name* (eg "layout" or "tree-simple".
-  def self.register(name : String, &block : Sheen::Renderer -> String) : Nil
+  def self.register(name : String, &block : -> String) : Nil
     @@registry[name] = block
   end
 
@@ -22,18 +22,13 @@ class Examples
     @@registry.keys.sort!
   end
 
-  # Clears all registered examples.
-  def self.clear : Nil
-    @@registry.clear
-  end
-
-  # Renders the example named *name* through *renderer*.
+  # Renders the example named *name* example consumer.
   #
   # Raises `UnknownExample` if nothing is registered under *name*.
-  def self.run(name : String, renderer : Sheen::Renderer = Sheen.renderer) : String
+  def self.run(name : String) : String
     block = @@registry[name]?
     raise UnknownExample.new(name, names) unless block
-    block.call(renderer)
+    block.call
   end
 end
 
