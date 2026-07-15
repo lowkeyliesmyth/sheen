@@ -8,15 +8,17 @@ module Sheen
   class Renderer
     # The output the profile is detected from and that rendering targets.
     property output : IO
+    property input : IO
+    property env : Foundation::Env
 
-    def initialize(@output : IO = STDOUT)
+    def initialize(@output : IO = STDOUT, @input : IO = STDIN, @env : Foundation::Env = Foundation::LiveEnv.new)
       @color_profile = nil.as(Foundation::Profile?)
       @has_dark_background = nil.as(Bool?)
     end
 
     # The color profile, detected from *@output* on first use, if not already set explicitly.
     def color_profile : Foundation::Profile
-      @color_profile ||= Foundation::Profile.detect(@output)
+      @color_profile ||= Foundation::Profile.detect(@output, @env)
     end
 
     # Bypasses detection and sets the color profile explicitly, primarily used for testing
@@ -30,10 +32,10 @@ module Sheen
     def has_dark_background? : Bool
       bg = @has_dark_background
       return bg unless bg.nil?
-      bg.nil? ? (@has_dark_background = true) : bg
+      @has_dark_background = Sheen.has_dark_background?(@input, @output, @env)
     end
 
-    # Forces background darkness value
+    # Forces background darkness value to *value*
     def has_dark_background=(value : Bool) : Bool
       @has_dark_background = value
     end

@@ -10,7 +10,7 @@ module Sheen
   # 1. `COLORFGBG`(a `fg;bg` pair of ANSI indices)
   # 2. An OSC11 background query written to *output* and read from *input* only when both are real TTYs
   # 3. Fallback to Dark (default black background) when nothing else answers
-  def self.has_dark_background?(input : IO = STDIN, output : IO = STDOUT, env = ENV) : Bool
+  def self.has_dark_background?(input : IO = STDIN, output : IO = STDOUT, env : Foundation::Env = Foundation::LiveEnv.new) : Bool
     if rgb = background_from_env(env)
       return dark?(rgb)
     end
@@ -21,7 +21,7 @@ module Sheen
   end
 
   # The background color extracted from `COLORFGBG` or nil when the var is absent or unparsable.  The last `;`-separated field is the ANSI background index.
-  private def self.background_from_env(env) : Foundation::RGB?
+  private def self.background_from_env(env : Foundation::Env) : Foundation::RGB?
     fgbg = env["COLORFGBG"]?
     return nil unless fgbg && fgbg.includes?(';')
 

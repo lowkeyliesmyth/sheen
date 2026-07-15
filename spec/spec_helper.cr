@@ -1,6 +1,8 @@
 require "spec"
 require "../src/sheen"
 
-def mock_env(h)
-  Foundation::MockEnv.new(h)
+# Spec helper for creating Foundation::MockEnv objects from a *hash*.
+# Used for mocking env var behavior.
+def mock_env(hash)
+  Foundation::MockEnv.new(hash)
 end

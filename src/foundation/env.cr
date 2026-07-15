@@ -21,5 +21,9 @@ module Foundation
     def []?(key : String) : String?
       @h[key]?
     end
+
+    def []=(key : String, value : String) : String
+      @h[key] = value
+    end
   end
 end
