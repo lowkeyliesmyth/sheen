@@ -14,7 +14,7 @@ module Foundation
     TrueColor # 24bit color
 
     # Detects the color profile from *io*'s TTY status and *env*. Honors NO_COLOR (no-color.org) and FORCE_COLOR (force-color.org). *env* only needs respond to `[]?`.
-    def self.detect(io : IO = STDOUT, env = ENV) : Profile
+    def self.detect(io : IO = STDOUT, env : Env = LiveEnv.new) : Profile
       return Ascii if env_no_color?(env)
 
       base = from_environment(io, env)
@@ -24,7 +24,7 @@ module Foundation
     end
 
     # The profile implied by TTY status and TERM/COLORTERM, ignoring NO_COLOR.
-    private def self.from_environment(io : IO, env) : Profile
+    private def self.from_environment(io : IO, env : Env = LiveEnv.new) : Profile
       return NoTTY unless io.tty?
       return TrueColor if env["GOOGLE_CLOUD_SHELL"]? == "true"
 
@@ -38,7 +38,7 @@ module Foundation
     end
 
     # The profile implied by COLORTERM, or nil if COLORTERM doesn't apply.
-    private def self.from_colorterm(env, term : String) : Profile?
+    private def self.from_colorterm(env : Env, term : String) : Profile?
       case (env["COLORTERM"]? || "").downcase
       when "24bit", "truecolor"
         # screen/tmux caveat: screen only does ANSI256 unless it's tmux?
@@ -69,13 +69,13 @@ module Foundation
     end
 
     # True when NO_COLOR is present, is not empty, and is not overridden by FORCE_COLOR.
-    private def self.env_no_color?(env) : Bool
+    private def self.env_no_color?(env : Env) : Bool
       return false unless nc = env["NO_COLOR"]?
       !nc.empty? && !force_color?(env)
     end
 
     # True when FORCE_COLOR is set to a non-"0" value.
-    private def self.force_color?(env) : Bool
+    private def self.force_color?(env : Env) : Bool
       return false unless forced = env["FORCE_COLOR"]?
       forced != "0"
     end
