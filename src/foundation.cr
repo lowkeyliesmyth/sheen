@@ -1,5 +1,6 @@
 require "./foundation/ansi"
 require "./foundation/color_space"
+require "./foundation/env"
 require "./foundation/palette"
 require "./foundation/profile"
 require "./foundation/sgr"
