@@ -4,9 +4,10 @@
 
 Sheen is a declarative terminal styling and layout library for Crystal. It lets you build styled CLI output and TUI views with an immutable, CSS-like API instead of hand-rolled ANSI escape sequences.
 
-Inspired by our friends Charm who built [lipgloss](https://github.com/charmbracelet/lipgloss).
+Inspired by our friends at Charm who built [lipgloss](https://github.com/charmbracelet/lipgloss).
 
-TODO: screenshot output here.
+![Sheen example layout output](examples/images/layout.png)
+
 
 ## Why sheen?
 
@@ -37,17 +38,16 @@ box = Sheen.style do |s|
   s.bold
   s.foreground "#FAFAFA"
   s.background "#7D56F4"
-  s.padding 2
-  s.width 24
-  s.height 7
+  s.padding(2)
+  s.width(24)
+  s.height(7)
   s.align Sheen::Position::CENTER, Sheen::Position::CENTER
 end
 
 puts box.render("Hello, Crystal")
 ```
 
-TODO: screenshot output here.
-
+![Sheen box output](examples/images/box.png)
 
 The same style built fluently:
 

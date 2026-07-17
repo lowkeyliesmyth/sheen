@@ -57,26 +57,28 @@ module Sheen
     nil
   end
 
-  # Reads one terminal reply, stopping at an OSC terminator (BEL or ST), a cursor report, or a safety bound.
-  private def self.read_osc_response(io : IO) : String
+  # :nodoc:
+  # Reads the terminal's reply to the combined OSC11 + CPR query, returning every byte through to the CPR terminator ('R'). This ensures that  the kernel input buffer is drained of any query responses that would otherwise dirty up the term visuals.
+  def self.read_osc_response(io : IO) : String
     String.build do |buf|
-      prev = 0_u8
       # OSC11 background reply plus the CPR fence sequence should always fit within 128 bytes with room to spare
       128.times do
-        byte = io.read_byte
+        byte = begin
+          io.read_byte
+        rescue IO::TimeoutError
+          nil
+        end
         break unless byte
         buf << byte.unsafe_chr
-        break if byte == 0x07_u8                    # BEL terminates the OSC reply
-        break if prev == 0x1b_u8 && byte == 0x5c_u8 # ST (ESC \) terminates the OSC reply
-        break if byte == 0x52_u8                    # 'R' ends the CSI 6n fence for OSC unsupported terms
-        prev = byte
+        break if byte == 0x52_u8 # 'R' terminates the CPR 6n fence, the last byte of the reply
       end
     end
   end
 
+  # :nodoc:
   # Parses an OSC 11 reply (like `"\e]11;rgb:1717/2b2b/3636\a"`) in to an `RGB`, taking the high byte of each 16-bit color channel.
   # Returns nil for any non-color reply.
-  private def self.parse_osc_color(response : String) : Foundation::RGB?
+  def self.parse_osc_color(response : String) : Foundation::RGB?
     body = response.lchop("\e]11;").rchop('\a').rchop("\e\\")
     return nil unless body.starts_with?("rgb:")
 
