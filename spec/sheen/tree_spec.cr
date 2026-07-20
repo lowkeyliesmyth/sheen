@@ -94,3 +94,76 @@ describe Sheen::Tree do
     tree.hide(false).hidden?.should be_false
   end
 end
+
+describe "Sheen::Tree enumerators and indenters" do
+  it "default_enumerator branches only on the last child" do
+    kids = Sheen::NodeChildren.new
+    %w(a b c).each { |v| kids.append(Sheen::Leaf.new(v)) }
+    Sheen::Tree.default_enumerator(kids, 0).should eq("├──")
+    Sheen::Tree.default_enumerator(kids, 1).should eq("├──")
+    Sheen::Tree.default_enumerator(kids, 2).should eq("└──")
+  end
+
+  it "rounded_enumerator rounds only the final corner" do
+    kids = Sheen::NodeChildren.new.append(Sheen::Leaf.new("a")).append(Sheen::Leaf.new("b"))
+    Sheen::Tree.rounded_enumerator(kids, 0).should eq("├──")
+    Sheen::Tree.rounded_enumerator(kids, 1).should eq("╰──")
+  end
+
+  it "default_indenter continues sibling lines except under the last child" do
+    kids = Sheen::NodeChildren.new.append(Sheen::Leaf.new("a")).append(Sheen::Leaf.new("b"))
+    Sheen::Tree.default_indenter(kids, 0).should eq("│  ")
+    Sheen::Tree.default_indenter(kids, 1).should eq("   ")
+  end
+end
+
+describe "Sheen::Tree styling DSL" do
+  it "carries no config until a styling setter is called" do
+    Sheen::Tree.new.config.should be_nil
+  end
+
+  it "lazily builds config and returns self from a setter" do
+    tree = Sheen::Tree.new
+    tree.enumerator_style(Sheen::Style.new.bold).should be(tree)
+    tree.config.should_not be_nil
+  end
+
+  it "applies a static enumerator style at every position" do
+    tree = Sheen::Tree.root("r").child("a", "b").enumerator_style(Sheen::Style.new.bold)
+    config = tree.config.not_nil! # ameba:disable Lint/NotNil
+    kids = tree.children
+    config.enumerator_style_picker.call(kids, 0).bold?.should be_true
+    config.enumerator_style_picker.call(kids, 1).bold?.should be_true
+  end
+
+  it "invokes an enumerator style block per index" do
+    tree = Sheen::Tree.root("r").child("a", "b").enumerator_style do |_children, i|
+      i.zero? ? Sheen::Style.new.bold : Sheen::Style.new.faint
+    end
+
+    config = tree.config.not_nil! # ameba:disable Lint/NotNil
+    kids = tree.children
+    config.enumerator_style_picker.call(kids, 0).bold?.should be_true
+    config.enumerator_style_picker.call(kids, 1).faint?.should be_true
+  end
+
+  it "stores item style, root style, customer enumerator, and indenter" do
+    tree = Sheen::Tree.new
+      .item_style(Sheen::Style.new.italic)
+      .root_style(Sheen::Style.new.underline)
+      .enumerator(->Sheen::Tree.rounded_enumerator(Sheen::Children, Int32))
+      .indenter(->(_c : Sheen::Children, _i : Int32) { ">> " })
+    config = tree.config.not_nil! # ameba:disable Lint/NotNil
+    kids = Sheen::NodeChildren.new.append(Sheen::Leaf.new("x"))
+    config.item_style_picker.call(kids, 0).italic?.should be_true
+    config.root_style.underline?.should be_true
+    config.enumerator.call(kids, 0).should eq("╰──")
+    config.indenter.call(kids, 0).should eq(">> ")
+  end
+
+  it "seeds the default enumerator style with a trailing pad" do
+    config = Sheen::TreeStyle.new
+    kids = Sheen::NodeChildren.new.append(Sheen::Leaf.new("x"))
+    config.enumerator_style_picker.call(kids, 0).padding_right.should eq(1)
+  end
+end
