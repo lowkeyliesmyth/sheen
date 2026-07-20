@@ -167,3 +167,160 @@ describe "Sheen::Tree styling DSL" do
     config.enumerator_style_picker.call(kids, 0).padding_right.should eq(1)
   end
 end
+
+# Right-trim each line since join_horizontal emits trailing spaces on short multiline lines.
+private def trimmed(string : String) : String
+  string.split('\n').map(&.rstrip).join('\n')
+end
+
+describe "Sheen::Tree#render" do
+  it "renders a nested tree with default brancehs and depth-3 continuations" do
+    tree = Sheen::Tree.new.child("Foo", Sheen::Tree.root("Bar").child("Qux", Sheen::Tree.root("Qux-2").child("Foo", "Bar"), "Qux-3"), "Baz")
+    tree.render.should eq(<<-TREE.rstrip)
+      ├── Foo
+      ├── Bar
+      │   ├── Qux
+      │   ├── Qux-2
+      │   │   ├── Foo
+      │   │   └── Bar
+      │   └── Qux-3
+      └── Baz
+      TREE
+  end
+
+  it "renders rounded final corners with the rounded enumerator" do
+    tree = Sheen::Tree.new
+      .child("Foo", Sheen::Tree.root("Bar").child("Qux", "Qux-2"), "Baz")
+      .enumerator(->Sheen::Tree.rounded_enumerator(Sheen::Children, Int32))
+    tree.render.should eq(<<-TREE.rstrip)
+    ├── Foo
+    ├── Bar
+    │   ├── Qux
+    │   ╰── Qux-2
+    ╰── Baz
+    TREE
+  end
+
+  it "prints the root value when set" do
+    tree = Sheen::Tree.root("Root")
+      .child("Foo", Sheen::Tree.root("Bar").child("Qux"), "Baz")
+    tree.render.should eq(<<-TREE.rstrip)
+      Root
+      ├── Foo
+      ├── Bar
+      │   └── Qux
+      └── Baz
+      TREE
+  end
+
+  it "omits a hidden node and keeps the last-child prefix correct" do
+    tree = Sheen::Tree.new.child(
+      "Foo",
+      Sheen::Tree.root("Bar").child(
+        "Qux",
+        Sheen::Tree.root("Qux-2").child("Foo-2", "Bar-2").hide,
+        "Qux-3",
+      ),
+      "Baz",
+    )
+    tree.render.should eq(<<-TREE.rstrip)
+    ├── Foo
+    ├── Bar
+    │   ├── Qux
+    │   └── Qux-3
+    └── Baz
+    TREE
+  end
+
+  it "renders an entirely hidden tree as an empty string" do
+    tree = Sheen::Tree.new.child("Foo", "Bar").hide
+    tree.render.should eq("")
+  end
+
+  it "renders a custom enumerator and indenter" do
+    tree = Sheen::Tree.new.child(
+      "Foo",
+      Sheen::Tree.root("Bar").child(
+        "Qux",
+        Sheen::Tree.root("Qux-2").child("Foo-2", "Bar-2"),
+        "Qux-3",
+      ),
+      "Baz",
+    )
+      .enumerator(->(_c : Sheen::Children, _i : Int32) { "->" })
+      .indenter(->(_c : Sheen::Children, _i : Int32) { "->" })
+    tree.render.should eq(<<-TREE.rstrip)
+      -> Foo
+      -> Bar
+      -> -> Qux
+      -> -> Qux-2
+      -> -> -> Foo-2
+      -> -> -> Bar-2
+      -> -> Qux-3
+      -> Baz
+      TREE
+  end
+
+  it "right-aligns variable width enumerators to the widest prefix" do
+    romans = {1 => "I", 2 => "II", 3 => "III", 4 => "IV", 5 => "V"}
+    tree = Sheen::Tree.root("Ye Olde Root")
+      .child("Foo", "Bar", "Baz", "Qux", "Quack")
+      .enumerator(->(_c : Sheen::Children, i : Int32) { romans[i + 1] })
+    tree.render.should eq(<<-TREE.rstrip)
+      Ye Olde Root
+        I Foo
+       II Bar
+      III Baz
+       IV Qux
+        V Quack
+      TREE
+  end
+
+  it "reconciles multiline node heights against the branch prefix" do
+    tree = Sheen::Tree.root("Big\nRoot\nNode").child(
+      "Foo",
+      Sheen::Tree.root("Bar").child(
+        "Line1\nLine2\nLine3\nLine4",
+        Sheen::Tree.root("Qux").child("Foo-2", "Bar-2"),
+        "Qux-2",
+      ),
+      "Baz\nBaz Line2"
+    )
+
+    trimmed(tree.render).should eq(<<-TREE.rstrip)
+    Big
+    Root
+    Node
+    ├── Foo
+    ├── Bar
+    │   ├── Line1
+    │   │   Line2
+    │   │   Line3
+    │   │   Line4
+    │   ├── Qux
+    │   │   ├── Foo-2
+    │   │   └── Bar-2
+    │   └── Qux-2
+    └── Baz
+        Baz Line2
+    TREE
+  end
+
+  it "uses a subtree's own enumerator config, overriding the parents" do
+    tree = Sheen::Tree.root("root").child(
+      "a",
+      Sheen::Tree.root("sub").child("x", "y")
+        .enumerator(->Sheen::Tree.rounded_enumerator(Sheen::Children, Int32)),
+      "b",
+    )
+
+    tree.render.should eq(<<-TREE.rstrip)
+    root
+    ├── a
+    ├── sub
+    │   ├── x
+    │   ╰── y
+    └── b
+    TREE
+  end
+end

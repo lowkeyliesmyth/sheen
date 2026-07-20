@@ -230,6 +230,16 @@ module Sheen
       self
     end
 
+    # Renders the whole tree to a string using this node's configuration, or `TreeConfig` defaults if none have been set.
+    def render : String
+      TreePainter.new(@config || TreeConfig.new).render(self, true, "")
+    end
+
+    # Render the tree to *io*. Overrides `Node#.to_s` which emits only the bare value.
+    def to_s(io : IO) : Nil
+      io << render
+    end
+
     # Sets one static *style* for every enumerator prefix.
     #
     # Returns self.
