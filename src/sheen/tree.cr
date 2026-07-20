@@ -88,7 +88,7 @@ module Sheen
   alias StylePicker = Children, Int32 -> Style
 
   # The mutable render configuration for a `Tree` node, containing the enumerator and indenter generators and the enumerator, item and root styles.
-  class TreeStyle
+  class TreeConfig
     # The branch-prefix generator.
     property enumerator : Enumerator
     # The indent generator.
@@ -118,7 +118,7 @@ module Sheen
     getter value : String
     getter? hidden : Bool
     # This node's render configuration, or `nil` while it inherits its parent's.
-    getter config : TreeStyle?
+    getter config : TreeConfig?
 
     def initialize(@value : String = "", @hidden : Bool = false)
       @children = NodeChildren.new
@@ -303,8 +303,8 @@ module Sheen
     end
 
     # Lazily build and return this node's render configuration.
-    private def config! : TreeStyle
-      @config ||= TreeStyle.new
+    private def config! : TreeConfig
+      @config ||= TreeConfig.new
     end
 
     # A copy of the tree's children.

@@ -162,7 +162,7 @@ describe "Sheen::Tree styling DSL" do
   end
 
   it "seeds the default enumerator style with a trailing pad" do
-    config = Sheen::TreeStyle.new
+    config = Sheen::TreeConfig.new
     kids = Sheen::NodeChildren.new.append(Sheen::Leaf.new("x"))
     config.enumerator_style_picker.call(kids, 0).padding_right.should eq(1)
   end
