@@ -70,10 +70,11 @@ module Sheen
       item = item_style.render(child.value)
       multiline_prefix = prefix
 
-      # Reconcile heights so a multiline item keeps columns aligned. Grow the node prefix with styled indents, then grow the ancestor prefix.
+      # Reconcile heights so a multiline item keeps columns aligned. First grow the node prefix with styled indents so each item gets a continuation glypth.
       while Sheen.height(item) > Sheen.height(node_prefix)
         node_prefix = Sheen.join_vertical(Position::LEFT, node_prefix, enum_style.render(indent))
       end
+      # THEN grow the ancestor prefix so every item also carries the ancestor's indent.
       while Sheen.height(node_prefix) > Sheen.height(multiline_prefix)
         multiline_prefix = Sheen.join_vertical(Position::LEFT, multiline_prefix, prefix)
       end
