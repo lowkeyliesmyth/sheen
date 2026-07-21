@@ -232,7 +232,7 @@ module Examples
     # Three paragraphs, right- center- left- aligned respectively, with a highlighted background.
     private def self.paragraph_section : String
       par_a = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla imperdiet, ex quis pulvinar pulvinar, eros nisl feugiat neque, at luctus metus metus at libero. Phasellus tincidunt lacinia mi nec efficitur. Aliquam finibus imperdiet sodales. Interdum et malesuada fames ac ante ipsum primis in faucibus."
-      par_b = "Maecenas fringilla porttitor felis eget auctor. Etiam semper neque congue, luctus nibh vitae, eleifend libero. Duis volutpat urna sit amet faucibus ultrices. Maecenas at pulvinar nibh. Sed tincidunt at nisi vel lobortis. Integer luctus turpis quis aliquet consequat. Donec faucibus neque nec varius posuere." # ameba:disable Lint/Typos
+      par_b = "Maecenas fringilla porttitor felis eget auctor. Etiam semper neque congue, luctus nibh vitae, eleifend libero. Duis volutpat urna sit amet faucibus ultrices. Maecenas at pulvinar nibh. Sed tincidunt at nisi vel lobortis. Integer luctus turpis quis aliquet consequat. Donec faucibus neque nec various posuere."
       par_c = "Ut ut auctor magna, in commodo lorem. Nunc vitae lacus molestie, molestie mauris et, dapibus tellus. Integer consectetur dui vitae lacus malesuada, quis accumsan purus mollis. Pellentesque iaculis ligula nec tempus maximus. Proin lacinia, quam eget posuere finibus, neque sem tempor urna, vestibulum elementum massa dolor sit amet dolor."
 
       paragraph_style = Sheen::Style.new
