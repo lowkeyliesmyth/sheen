@@ -62,6 +62,57 @@ module Sheen
     end
   end
 
+  # A predicate-filtered, readonly view over another `Children`.
+  class Filter < Children
+    @predicate : (Node, Int32) -> Bool
+
+    # Wraps *data*. Every node passes until `#filter` is set.
+    def initialize(@data : Children)
+      @predicate = ->(_node : Node, _index : Int32) { true }
+    end
+
+    # The filter *block* that, given the node and its index in the wrapped data, decides whether each node is kept or filtered out.
+    #
+    # Returns self.
+    def filter(&block : Node, Int32 -> Bool) : Filter
+      @predicate = block
+      self
+    end
+
+    # The *index*-th passing node, or nil if out or range.
+    def at(index : Int32) : Node?
+      return nil if index < 0
+      passing = 0
+      @data.length.times do |i|
+        node = @data.at(i)
+        next unless node
+        next unless @predicate.call(node, i)
+        return node if passing == index
+        passing += 1
+      end
+      nil
+    end
+
+    # The number of passing nodes.
+    def length : Int32
+      count = 0
+      @data.length.times do |i|
+        node = @data.at(i)
+        count += 1 if node && @predicate.call(node, i)
+      end
+      count
+    end
+  end
+
+  # Builds a detached `Children` of `Leaf` nodes out of *values*.
+  #
+  # Is a data source for a `Filter` or for `Tree#child`.
+  def self.string_data(*values : String) : Children
+    children = NodeChildren.new
+    values.each { |value| children.append(Leaf.new(value)) }
+    children
+  end
+
   # A node in a tree.
   #
   # A childless implementation of Node whose value is the string it was built from.

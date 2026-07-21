@@ -324,3 +324,62 @@ describe "Sheen::Tree#render" do
     TREE
   end
 end
+
+describe "Sheen.string_data" do
+  it "builds a Children of leaves from strings" do
+    data = Sheen.string_data("Foo", "Bar", "Baz")
+    data.length.should eq(3)
+    data.at(0).try(&.value).should eq("Foo")
+    data.at(2).try(&.value).should eq("Baz")
+  end
+
+  it "feeds directly into a tree as children" do
+    tree = Sheen::Tree.root("Root").child(Sheen.string_data("a", "b"))
+    tree.children.length.should eq(2)
+    tree.children.at(1).try(&.value).should eq("b")
+  end
+end
+
+describe Sheen::Filter do
+  it "keeps only the nodes the predicate accepts and reindexes over them" do
+    data = Sheen.string_data("Foo", "Bar", "Baz", "Nope")
+    filter = Sheen::Filter.new(data).filter { |_node, index| index != 3 }
+    filter.length.should eq(3)
+    filter.at(1).try(&.value).should eq("Bar")
+  end
+
+  it "filters on node content and not just the index" do
+    data = Sheen.string_data("Rose Quartz", "Unidentified", "Pyrite")
+    filter = Sheen::Filter.new(data).filter { |node, _index| node.value != "Unidentified" }
+    filter.length.should eq(2)
+    filter.at(0).try(&.value).should eq("Rose Quartz")
+  end
+
+  it "materializes only the passing nodes when attached to a tree" do
+    data = Sheen.string_data("Foo", "Bar", "Baz", "Nope")
+    filter = Sheen::Filter.new(data).filter { |_node, index| index != 3 }
+    tree = Sheen::Tree.root("Root").child(filter)
+    tree.render.should eq(<<-TREE.rstrip)
+    Root
+    ├── Foo
+    ├── Bar
+    └── Baz
+    TREE
+  end
+
+  it "passes every node through until a predicate is set" do
+    Sheen::Filter.new(Sheen.string_data("a", "b")).length.should eq(2)
+  end
+
+  it "returns nil for an out of range index" do
+    data = Sheen.string_data("Foo", "Bar", "Baz", "Nope")
+    filter = Sheen::Filter.new(data).filter { |_node, index| index != 3 }
+    filter.at(10).should be_nil
+  end
+
+  it "reports zero length when the predicate rejects everything" do
+    filter = Sheen::Filter.new(Sheen.string_data("a", "b", "c")).filter { |_node, _index| false }
+    filter.length.should eq(0)
+    filter.at(0).should be_nil
+  end
+end
