@@ -1,8 +1,8 @@
 require "../spec_helper"
 
 # Testing helper. Builds the canonical three item list under *enumr*
-private def enumerated(enumr : Sheen::Enumerator) : String
-  Sheen::List.new("Foo", "Bar", "Baz").enumerator(enumr).render
+private def enumerated(kind : Sheen::List::Enumerators) : String
+  Sheen::List.new("Foo", "Bar", "Baz").enumerator(kind).render
 end
 
 describe Sheen::List do
@@ -35,7 +35,7 @@ describe Sheen::List do
     list = Sheen::List.new
       .item("Foo")
       .item("Bar")
-      .item(Sheen::List.new("Hi", "Hallo", "Hola").enumerator(->Sheen::List.roman(Sheen::Children, Int32)))
+      .item(Sheen::List.new("Hi", "Hallo", "Hola").enumerator(:roman))
       .item("Qux")
     list.render.should eq(<<-LIST.rstrip)
       • Foo
@@ -87,7 +87,7 @@ end
 
 describe "Sheen::List enumerators" do
   it "alpha renders upcased letters" do
-    enumerated(->Sheen::List.alpha(Sheen::Children, Int32)).should eq(<<-LIST.rstrip)
+    enumerated(:alpha).should eq(<<-LIST.rstrip)
     A. Foo
     B. Bar
     C. Baz
@@ -95,7 +95,7 @@ describe "Sheen::List enumerators" do
   end
 
   it "arabic renders numbers" do
-    enumerated(->Sheen::List.arabic(Sheen::Children, Int32)).should eq(<<-LIST.rstrip)
+    enumerated(:arabic).should eq(<<-LIST.rstrip)
     1. Foo
     2. Bar
     3. Baz
@@ -103,7 +103,7 @@ describe "Sheen::List enumerators" do
   end
 
   it "roman right-aligns numerals to the widest prefix" do
-    enumerated(->Sheen::List.roman(Sheen::Children, Int32)).should eq(<<-LIST.rstrip)
+    enumerated(:roman).should eq(<<-LIST.rstrip)
       I. Foo
      II. Bar
     III. Baz
@@ -111,7 +111,7 @@ describe "Sheen::List enumerators" do
   end
 
   it "bullet renders bullets" do
-    enumerated(->Sheen::List.bullet(Sheen::Children, Int32)).should eq(<<-LIST.rstrip)
+    enumerated(:bullet).should eq(<<-LIST.rstrip)
     • Foo
     • Bar
     • Baz
@@ -119,7 +119,7 @@ describe "Sheen::List enumerators" do
   end
 
   it "asterisk renders asterisks" do
-    enumerated(->Sheen::List.asterisk(Sheen::Children, Int32)).should eq(<<-LIST.rstrip)
+    enumerated(:asterisk).should eq(<<-LIST.rstrip)
     * Foo
     * Bar
     * Baz
@@ -127,11 +127,43 @@ describe "Sheen::List enumerators" do
   end
 
   it "dash renders dashes" do
-    enumerated(->Sheen::List.dash(Sheen::Children, Int32)).should eq(<<-LIST.rstrip)
+    enumerated(:dash).should eq(<<-LIST.rstrip)
     - Foo
     - Bar
     - Baz
     LIST
+  end
+
+  it "accepts a custom enumerator block" do
+    list = Sheen::List.new("Foo", "Bar", "Baz").enumerator { |_items, _i| "?" }
+    list.render.should eq(<<-LIST.rstrip)
+    ? Foo
+    ? Bar
+    ? Baz
+    LIST
+  end
+
+  it "accepts a custom enumerator as an Enumerator proc" do
+    enumr = ->(_items : Sheen::Children, _i : Int32) { "?" }
+    Sheen::List.new("Foo", "Bar", "Baz").enumerator(enumr).render.should eq(<<-LIST.rstrip)
+    ? Foo
+    ? Bar
+    ? Baz
+    LIST
+  end
+
+  it "right-aligns a custom enumerator of varying width" do
+    list = Sheen::List.new("Duck", "Duck", "Goose")
+      .enumerator { |_items, i| i % 2 == 1 ? "Goose:" : "Duck:" }
+    list.render.should eq(<<-LIST.rstrip)
+     Duck: Duck
+    Goose: Duck
+     Duck: Goose
+    LIST
+  end
+
+  it "never invokes a custom enumerator on an empty list" do
+    Sheen::List.new.enumerator { |_items, _i| "?" }.render.should eq("")
   end
 end
 

@@ -15,9 +15,32 @@ module Sheen
     # Build a list of *items* seeded with a bullet enumerator and a single space indent.
     def initialize(*items)
       @tree = Tree.new
-        .enumerator(->List.bullet(Children, Int32))
+        .enumerator(Enumerators::Bullet.to_proc)
         .indenter(->List.space_indenter(Children, Int32))
       items.each { |value| item(value) }
+    end
+
+    # Builtin enumerator styles.
+    enum Enumerators
+      Alpha
+      Arabic
+      Asterisk
+      Bullet
+      Dash
+      Roman
+
+      # The `Enumerator` proc backing this style member.
+
+      def to_proc : Enumerator
+        case self
+        in .alpha?    then ->List.alpha(Children, Int32)
+        in .arabic?   then ->List.arabic(Children, Int32)
+        in .asterisk? then ->List.asterisk(Children, Int32)
+        in .bullet?   then ->List.bullet(Children, Int32)
+        in .dash?     then ->List.dash(Children, Int32)
+        in .roman?    then ->List.roman(Children, Int32)
+        end
+      end
     end
 
     # Appends a nested *value* list, which nests as a subtree
@@ -108,6 +131,14 @@ module Sheen
     # Returns self.
     def enumerator(&block : Children, Int32 -> String) : List
       @tree.enumerator(&block)
+      self
+    end
+
+    # Convenience method to set one of the builtin enumerator styles by *kind*. eg `enumerator(:roman)`
+    #
+    # Returns self.
+    def enumerator(kind : Enumerators) : List
+      @tree.enumerator(kind.to_proc)
       self
     end
 
