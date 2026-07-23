@@ -12,7 +12,7 @@ module Sheen
     ROMAN_VALUES  = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1]
     ALPHA_LEN     = 26
 
-    # Build a list of *items* seeded with a bullet enumerator and a single space indent.
+    # Build a list of *items*. Uses the bullet enumerator and a single space indent as defaults.
     def initialize(*items)
       @tree = Tree.new
         .enumerator(Enumerators::Bullet.to_proc)

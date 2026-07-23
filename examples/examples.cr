@@ -35,6 +35,10 @@ end
 # Example reference implementations self-register on require. Add one line per example reference.
 #
 require "./layout/document"
+require "./list/ddg"
+require "./list/glow"
+require "./list/monsters"
+require "./list/simple"
 require "./tree/filter"
 require "./tree/gems"
 require "./tree/mix"
