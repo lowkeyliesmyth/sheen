@@ -183,7 +183,7 @@ module Sheen
       self
     end
 
-    # Sets the style applied to every border.
+    # Sets the *style* applied to every border.
     #
     # Returns self.
     def border_style(style : Style) : Table
@@ -191,7 +191,7 @@ module Sheen
       self
     end
 
-    # Sets the style applied to every border glyph. The resizer expands or shrinks columns to fit.
+    # Sets the target table *w*idth in columns. The resizer expands or shrinks columns to fit.
     #
     # Returns self.
     def width(w : Int32) : Table
@@ -199,7 +199,7 @@ module Sheen
       self
     end
 
-    # Sets a manual table height. Clipped rows overflow to an ellipses.
+    # Sets a manual table *h*eight in rows. Clipped rows overflow to an ellipses.
     #
     # Returns self.
     def height(h : Int32) : Table
@@ -208,7 +208,7 @@ module Sheen
       self
     end
 
-    # Sets the starting row offset for rendering.
+    # Sets the starting row *o*ffset for rendering.
     #
     # Returns self.
     def offset(o : Int32) : Table
