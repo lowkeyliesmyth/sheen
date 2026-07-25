@@ -111,11 +111,23 @@ module Sheen
       self
     end
 
+    # :ditto:
+    def rows(rows : Enumerable(Array(String))) : Table
+      rows.each { |row| append_row(row) }
+      self
+    end
+
     # Sets the table headers from each one of *names*.
     #
     # Returns self.
     def headers(*names : String) : Table
       @headers = names.to_a
+      self
+    end
+
+    # :ditto:
+    def headers(names : Enumerable(String)) : Table
+      @headers = names.to_a.dup
       self
     end
 
