@@ -28,7 +28,7 @@ module Sheen
     getter? border_header : Bool
     getter? border_column : Bool
     getter? border_row : Bool
-    getter? border_style : Style
+    getter border_style : Style
     getter headers : Array(String)
     getter data : Data
     getter width : Int32
@@ -319,6 +319,27 @@ module Sheen
       Array(Array(String)).new(data.rows) do |i|
         Array(String).new(data.columns) { |j| data.at(i, j) }
       end
+    end
+
+    # Renders the table to a string. Pads headers out to the column count in place.
+    def render : String
+      has_headers = !@headers.empty?
+      has_rows = @data.rows > 0
+      return "" unless has_headers || has_rows
+
+      # (@headers.size...@data.columns).each { @headers << "" } if has_headers
+      (@headers.size...@data.columns).each do |_i|
+        @headers << ""
+      end if has_headers
+
+      matrix = Table.data_to_matrix(@data)
+      widths, heights = TableResizer.new(self, matrix).resize
+      TablePainter.new(self, widths, heights).render
+    end
+
+    # Renders the table to *io*.
+    def to_s(io : IO) : Nil
+      io << render
     end
   end
 end
