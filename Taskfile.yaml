@@ -43,6 +43,11 @@ tasks:
     cmds:
       - crystal build examples/main.cr --no-codegen
 
+  docs:
+    desc: Generates API usage docs from inline docstrings
+    cmds:
+      - crystal docs
+
   default:
     desc: Run default spec-lint checks
     deps: [spec, lint]
