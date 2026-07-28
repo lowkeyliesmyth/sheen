@@ -22,10 +22,17 @@ module Sheen
     {width(string), height(string)}
   end
 
-  # Joins *strings* left to right, aligning blocks of differing height along the vertical axis at *pos* (0.0=top, 0.5=center, 1.0=bottom, or any float in between).
-  # Each block's lines are padded to its own widest line so columns stay aligned.
+  # Joins *strings* left to right. Variadic form that delegates to the collection form.
   def self.join_horizontal(pos : Position, *strings : String) : String
+    join_horizontal(pos, strings.to_a)
+  end
+
+  # Joins the *strings* collection (eg table row cells) left to right, aligning blocks of differing height along the vertical axis at *pos* (0.0=top, 0.5=center, 1.0=bottom, or any float in between).
+  # Each block's lines are padded to its own widest line so columns stay aligned.
+  #
+  def self.join_horizontal(pos : Position, strings : Enumerable(String)) : String
     list = strings.to_a
+    return "" if list.empty?
     return list.first if list.size == 1
 
     blocks = list.map(&.split('\n'))
@@ -53,10 +60,16 @@ module Sheen
     end
   end
 
-  # Joins *strings* top to bottom, aligning lines of differing width along the horizontal axis at *pos* (0.0=left, 0.5=center, 1.0=right, or any float in between).
-  # All lines are padded to the widest line across every block
+  # Joins *strings* top to bottom. Variadic form that delegates to the collection form.
   def self.join_vertical(pos : Position, *strings : String) : String
+    join_vertical(pos, strings.to_a)
+  end
+
+  # Joins *strings* collection top to bottom, aligning lines of differing width along the horizontal axis at *pos* (0.0=left, 0.5=center, 1.0=right, or any float in between).
+  # All lines are padded to the widest line across every block.
+  def self.join_vertical(pos : Position, strings : Enumerable(String)) : String
     list = strings.to_a
+    return "" if list.empty?
     return list.first if list.size == 1
 
     blocks = list.map(&.split('\n'))
