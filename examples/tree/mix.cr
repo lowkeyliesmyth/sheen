@@ -7,15 +7,15 @@ module Examples::Tree::Styles
     pink = Sheen::Style.new.foreground(Sheen.color("212")).margin_right(1)
     blue = Sheen::Style.new.foreground(Sheen.color("81")).margin_right(1)
 
-    Sheen::Tree.new.root("Shiny").root_style(blue.underline.bold)
+    Sheen::Tree::Branch.new.root("Shiny").root_style(blue.underline.bold)
       .child(
         "Amethyst",
         "Topaz",
-        Sheen::Tree.root("Beryl")
+        Sheen::Tree::Branch.root("Beryl")
           .child("Emerald", "Aquamarine")
           .enumerator_style(pink)
           .item_style(purple.italic)
-          .enumerator(->Sheen::Tree.rounded_enumerator(Sheen::Children, Int32)),
+          .enumerator(->Sheen::Tree.rounded_enumerator(Sheen::Tree::Children, Int32)),
         "Garnet",
         "Peridot",
       )

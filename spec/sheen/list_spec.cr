@@ -144,7 +144,7 @@ describe "Sheen::List enumerators" do
   end
 
   it "accepts a custom enumerator as an Enumerator proc" do
-    enumr = ->(_items : Sheen::Children, _i : Int32) { "?" }
+    enumr = ->(_items : Sheen::Tree::Children, _i : Int32) { "?" }
     Sheen::List.new("Foo", "Bar", "Baz").enumerator(enumr).render.should eq(<<-LIST.rstrip)
     ? Foo
     ? Bar
@@ -169,14 +169,14 @@ end
 
 describe "Sheen::List enumerator values" do
   it "alpha counts in base-26 uppercase" do
-    kids = Sheen::NodeChildren.new
+    kids = Sheen::Tree::NodeChildren.new
     {0 => "A.", 25 => "Z.", 26 => "AA.", 50 => "AY.", 100 => "CW.", 701 => "ZZ.", 1000 => "ALM."}.each do |index, expected|
       Sheen::List.alpha(kids, index).should eq(expected)
     end
   end
 
   it "roman counts with a value-minus-one loop" do
-    kids = Sheen::NodeChildren.new
+    kids = Sheen::Tree::NodeChildren.new
     {0 => "I.", 25 => "XXVI.", 26 => "XXVII.", 50 => "LI.", 100 => "CI.", 701 => "DCCII.", 1000 => "MI."}.each do |index, expected|
       Sheen::List.roman(kids, index).should eq(expected)
     end
@@ -186,7 +186,7 @@ end
 describe "Sheen::List styling" do
   it "applies an enumerator style independent of items" do
     list = Sheen::List.new("foo", "bar", "baz")
-      .enumerator(->Sheen::List.arabic(Sheen::Children, Int32))
+      .enumerator(->Sheen::List.arabic(Sheen::Tree::Children, Int32))
       .enumerator_style(Sheen::Style.new.padding_right(1).transform(&.sub(".", ")")))
     list.render.should eq(<<-LIST.rstrip)
       1) foo

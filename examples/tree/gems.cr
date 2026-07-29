@@ -6,24 +6,24 @@ module Examples::Tree::Gems
     root_style = Sheen::Style.new.foreground(Sheen.color("35"))
     item_style = Sheen::Style.new.foreground(Sheen.color("212"))
 
-    Sheen::Tree.root("❖ Gemstones")
+    Sheen::Tree::Branch.root("❖ Gemstones")
       .child(
         "Diamond",
         "Sapphire",
-        Sheen::Tree.new.child(
+        Sheen::Tree::Branch.new.child(
           "Star Sapphire",
           "Padparadscha",
         ),
         "Emerald",
         "Opal",
-        Sheen::Tree.new.child(
+        Sheen::Tree::Branch.new.child(
           "Fire Opal",
           "Black Opal",
           "Peruvian Opal"
         ),
         "Amethyst",
       )
-      .enumerator(->Sheen::Tree.rounded_enumerator(Sheen::Children, Int32))
+      .enumerator(->Sheen::Tree.rounded_enumerator(Sheen::Tree::Children, Int32))
       .enumerator_style(enumerator_style)
       .root_style(root_style)
       .item_style(item_style)

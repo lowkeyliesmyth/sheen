@@ -14,9 +14,9 @@ module Sheen
 
     # Build a list of *items*. Uses the bullet enumerator and a single space indent as defaults.
     def initialize(*items)
-      @tree = Tree.new
+      @tree = Tree::Branch.new
         .enumerator(Enumerators::Bullet.to_proc)
-        .indenter(->List.space_indenter(Children, Int32))
+        .indenter(->List.space_indenter(Tree::Children, Int32))
       items.each { |value| item(value) }
     end
 
@@ -31,14 +31,14 @@ module Sheen
 
       # The `Enumerator` proc backing this style member.
 
-      def to_proc : Enumerator
+      def to_proc : Tree::Enumerator
         case self
-        in .alpha?    then ->List.alpha(Children, Int32)
-        in .arabic?   then ->List.arabic(Children, Int32)
-        in .asterisk? then ->List.asterisk(Children, Int32)
-        in .bullet?   then ->List.bullet(Children, Int32)
-        in .dash?     then ->List.dash(Children, Int32)
-        in .roman?    then ->List.roman(Children, Int32)
+        in .alpha?    then ->List.alpha(Tree::Children, Int32)
+        in .arabic?   then ->List.arabic(Tree::Children, Int32)
+        in .asterisk? then ->List.asterisk(Tree::Children, Int32)
+        in .bullet?   then ->List.bullet(Tree::Children, Int32)
+        in .dash?     then ->List.dash(Tree::Children, Int32)
+        in .roman?    then ->List.roman(Tree::Children, Int32)
         end
       end
     end
@@ -68,12 +68,12 @@ module Sheen
     end
 
     # The arabic-numeral enumerator.
-    def self.arabic(_items : Children, index : Int32) : String
+    def self.arabic(_items : Tree::Children, index : Int32) : String
       "#{index + 1}."
     end
 
     # The upcased alphabet enumerator.
-    def self.alpha(_items : Children, index : Int32) : String
+    def self.alpha(_items : Tree::Children, index : Int32) : String
       i = index
       if i >= ALPHA_LEN * ALPHA_LEN + ALPHA_LEN
         "#{('A'.ord + i // ALPHA_LEN // ALPHA_LEN - 1).chr}#{('A'.ord + (i // ALPHA_LEN) % ALPHA_LEN - 1).chr}#{('A'.ord + i % ALPHA_LEN).chr}."
@@ -85,7 +85,7 @@ module Sheen
     end
 
     # The roman numeral enumerator.
-    def self.roman(_items : Children, index : Int32) : String
+    def self.roman(_items : Tree::Children, index : Int32) : String
       i = index
       String.build do |bldr|
         ROMAN_VALUES.each_with_index do |value, v|
@@ -99,29 +99,29 @@ module Sheen
     end
 
     # The bullet enumerator.
-    def self.bullet(_items : Children, _index : Int32) : String
+    def self.bullet(_items : Tree::Children, _index : Int32) : String
       "•"
     end
 
     # The dash enumerator.
-    def self.dash(_items : Children, _index : Int32) : String
+    def self.dash(_items : Tree::Children, _index : Int32) : String
       "-"
     end
 
     # The asterisk enumerator.
-    def self.asterisk(_items : Children, _index : Int32) : String
+    def self.asterisk(_items : Tree::Children, _index : Int32) : String
       "*"
     end
 
     # The space indenter. This is the list default.
-    def self.space_indenter(_items : Children, _index : Int32) : String
+    def self.space_indenter(_items : Tree::Children, _index : Int32) : String
       " "
     end
 
     # Sets the enumerator generating each item's prefix.
     #
     # Returns self.
-    def enumerator(enumr : Enumerator) : List
+    def enumerator(enumr : Tree::Enumerator) : List
       @tree.enumerator(enumr)
       self
     end
@@ -129,7 +129,7 @@ module Sheen
     # Sets the enumerator from a *block*.
     #
     # Returns self.
-    def enumerator(&block : Children, Int32 -> String) : List
+    def enumerator(&block : Tree::Children, Int32 -> String) : List
       @tree.enumerator(&block)
       self
     end
@@ -153,7 +153,7 @@ module Sheen
     # Sets the enumerator style *block*, invoked per item.
     #
     # Returns self.
-    def enumerator_style(&block : Children, Int32 -> Style) : List
+    def enumerator_style(&block : Tree::Children, Int32 -> Style) : List
       @tree.enumerator_style(&block)
       self
     end
@@ -169,7 +169,7 @@ module Sheen
     # Sets the item style *block*, invoked per item.
     #
     # Returns self.
-    def item_style(&block : Children, Int32 -> Style) : List
+    def item_style(&block : Tree::Children, Int32 -> Style) : List
       @tree.item_style(&block)
       self
     end
@@ -185,7 +185,7 @@ module Sheen
     # Sets the indenter from a *block*.
     #
     # Returns self.
-    def indenter(&block : Children, Int32 -> String) : List
+    def indenter(&block : Tree::Children, Int32 -> String) : List
       @tree.indenter(&block)
       self
     end
@@ -219,6 +219,6 @@ module Sheen
     end
 
     # The wrapped tree, exposed so a nested `List` can be re-parented onto this one.
-    protected getter tree : Tree
+    protected getter tree : Tree::Branch
   end
 end
