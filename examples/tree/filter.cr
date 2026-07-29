@@ -3,7 +3,7 @@ require "../examples"
 module Examples::Tree::Filter
   # Builds a tree from a flat datasource, hiding the speciments still waiting to be identified.
   def self.render : String
-    specimens = Sheen.string_data(
+    specimens = Sheen::Tree.string_data(
       "Rose Quartz",
       "Unidentified",
       "Malachite",
@@ -12,11 +12,11 @@ module Examples::Tree::Filter
       "Pyrite",
     )
 
-    catalogued = Sheen::Filter.new(specimens).filter do |node, _index|
+    catalogued = Sheen::Tree::Filter.new(specimens).filter do |node, _index|
       node.value != "Unidentified"
     end
 
-    Sheen::Tree.root("Display Case").child(catalogued).render
+    Sheen::Tree::Branch.root("Display Case").child(catalogued).render
   end
 end
 

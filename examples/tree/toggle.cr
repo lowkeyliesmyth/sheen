@@ -28,19 +28,19 @@ module Examples::Tree::Toggle
   end
 
   def self.render : String
-    tree = Sheen::Tree.root(DirNode.new("~/collection", true))
-      .enumerator(->Sheen::Tree.rounded_enumerator(Sheen::Children, Int32))
+    tree = Sheen::Tree::Branch.root(DirNode.new("~/collection", true))
+      .enumerator(->Sheen::Tree.rounded_enumerator(Sheen::Tree::Children, Int32))
       .enumerator_style(ENUMERATOR)
       .child(
         DirNode.new("agates", false),
-        Sheen::Tree.root(DirNode.new("quartz", true)).child(
-          Sheen::Tree.root(DirNode.new("amethyst", true)).child(
+        Sheen::Tree::Branch.root(DirNode.new("quartz", true)).child(
+          Sheen::Tree::Branch.root(DirNode.new("amethyst", true)).child(
             FileNode.new("geode.png"),
             FileNode.new("cluster.png"),
           ),
         ),
-        Sheen::Tree.root(DirNode.new("beryl", true)).child(
-          Sheen::Tree.root(DirNode.new("emerald", true)).child(
+        Sheen::Tree::Branch.root(DirNode.new("beryl", true)).child(
+          Sheen::Tree::Branch.root(DirNode.new("emerald", true)).child(
             FileNode.new("raw.png"),
             FileNode.new("faceted.png"),
           ),

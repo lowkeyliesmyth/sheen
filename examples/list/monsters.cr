@@ -8,7 +8,7 @@ module Examples::List::Monsters
   HIGHLIGHT = Sheen::Style.new.foreground(Sheen.color("#00d787")).margin_right(1)
   ITEM      = Sheen::Style.new.foreground(Sheen.color("255"))
 
-  private def self.acquired?(node : Sheen::Node?) : Bool
+  private def self.acquired?(node : Sheen::Tree::Node?) : Bool
     ACQUIRED.includes?(node.try(&.value))
   end
 

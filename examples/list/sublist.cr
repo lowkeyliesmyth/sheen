@@ -19,21 +19,21 @@ module Examples::List::Sublist
     colors = Array.new(5) { |i| grid_start.blend(grid_end, i / 5.0).to_hex }
 
     # Shared enumerator and style functions reused by some of the sublists
-    checklist_enum = ->(_items : Sheen::Children, index : Int32) do
+    checklist_enum = ->(_items : Sheen::Tree::Children, index : Int32) do
       case index
       when 1 then "✓"
       else        "•"
       end
     end
 
-    checklist_enum_style = ->(_items : Sheen::Children, index : Int32) do
+    checklist_enum_style = ->(_items : Sheen::Tree::Children, index : Int32) do
       case index
       when 1 then Sheen::Style.new.foreground(special).padding_right(1)
       else        Sheen::Style.new.padding_right(1)
       end
     end
 
-    checklist_style = ->(_items : Sheen::Children, index : Int32) do
+    checklist_style = ->(_items : Sheen::Tree::Children, index : Int32) do
       case index
       when 1
         Sheen::Style.new.strikethrough.foreground(Sheen::AdaptiveColor.new("#969B86", "#696969"))
@@ -43,7 +43,7 @@ module Examples::List::Sublist
     end
 
     # Styles the repeated Sheen logo with the color grid. Clamping the index here because to gracefully handle any list having more entries than the grid has steps and causing an out of bounds index error.
-    logo_style = ->(items : Sheen::Children, index : Int32) do
+    logo_style = ->(items : Sheen::Tree::Children, index : Int32) do
       color = colors[index.clamp(0, colors.size - 1)]
       if index == items.length - 1
         title_style.padding(1, 2).margin(0, 0, 1, 0).max_width(20).background(color)
@@ -52,15 +52,15 @@ module Examples::List::Sublist
       end
     end
 
-    doc_enum = ->(_items : Sheen::Children, index : Int32) do
+    doc_enum = ->(_items : Sheen::Tree::Children, index : Int32) do
       index == 1 ? "|\n|" : " "
     end
 
-    doc_item_style = ->(_items : Sheen::Children, index : Int32) do
+    doc_item_style = ->(_items : Sheen::Tree::Children, index : Int32) do
       index == 1 ? base.foreground(highlight) : base.foreground(dim)
     end
 
-    doc_enum_style = ->(_items : Sheen::Children, index : Int32) do
+    doc_enum_style = ->(_items : Sheen::Tree::Children, index : Int32) do
       index == 1 ? Sheen::Style.new.foreground(highlight) : Sheen::Style.new.foreground(dim)
     end
 

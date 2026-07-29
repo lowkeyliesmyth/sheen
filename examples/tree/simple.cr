@@ -3,17 +3,17 @@ require "../examples"
 module Examples::Tree::Simple
   # A nested tree drawn with the default enumerator.
   def self.render : String
-    Sheen::Tree.root("Minerals")
+    Sheen::Tree::Branch.root("Minerals")
       .child("Pyrite")
       .child(
-        Sheen::Tree.new.root("Quartz")
+        Sheen::Tree::Branch.new.root("Quartz")
           .child("Rose Quartz")
           .child("Smoky Quartz")
           .child("Milky Quartz")
           .child("Tiger's Eye"),
       )
       .child(
-        Sheen::Tree.new.root("Mica")
+        Sheen::Tree::Branch.new.root("Mica")
           .child("Muscovite")
           .child("Biotite")
           .child("Lepidolite"),
