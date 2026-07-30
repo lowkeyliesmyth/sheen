@@ -15,7 +15,7 @@ module Examples::Tree::Styles
           .child("Emerald", "Aquamarine")
           .enumerator_style(pink)
           .item_style(purple.italic)
-          .enumerator(->Sheen::Tree.rounded_enumerator(Sheen::Tree::Children, Int32)),
+          .enumerator(:rounded),
         "Garnet",
         "Peridot",
       )

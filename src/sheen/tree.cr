@@ -154,6 +154,20 @@ module Sheen
       children.length - 1 == index ? "   " : "│  "
     end
 
+    # Builtin branch-prefix enumerator styles
+    enum Enumerators
+      Default
+      Rounded
+
+      # The `Enumerator` proc backing this style entry.
+      def to_proc : Enumerator
+        case self
+        in .default? then ->Tree.default_enumerator(Children, Int32)
+        in .rounded? then ->Tree.rounded_enumerator(Children, Int32)
+        end
+      end
+    end
+
     # The mutable render configuration for a `Branch` node, containing the enumerator and indenter generators and the enumerator, item and root styles.
     class Config
       # The branch-prefix generator.
@@ -168,7 +182,7 @@ module Sheen
       property root_style : Style
 
       def initialize(
-        @enumerator = ->Tree.default_enumerator(Children, Int32),
+        @enumerator = Enumerators::Default.to_proc,
         @indenter = ->Tree.default_indenter(Children, Int32),
         # Trailing padding space separates the branch prefix from the item at render time.
         @enumerator_style_picker = ->(_c : Children, _i : Int32) { Style.new.padding_right(1) },
@@ -345,6 +359,14 @@ module Sheen
       # Returns self.
       def enumerator(&block : Children, Int32 -> String) : Branch
         config!.enumerator = block
+        self
+      end
+
+      # Convenience method to set one of the builtin enumerator styles by *kind*. eg `enumerator(:rounded)`
+      #
+      # Returns self.
+      def enumerator(kind : Enumerators) : Branch
+        config!.enumerator = kind.to_proc
         self
       end
 

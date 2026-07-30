@@ -115,6 +115,24 @@ describe "Sheen::Tree enumerators and indenters" do
     Sheen::Tree.default_indenter(kids, 0).should eq("│  ")
     Sheen::Tree.default_indenter(kids, 1).should eq("   ")
   end
+
+  it "selects the rounded builtin by symbol" do
+    Sheen::Tree::Branch.root("r").child("a", "b")
+      .enumerator(:rounded).render.should eq(<<-TREE.rstrip)
+      r
+      ├── a
+      ╰── b
+      TREE
+  end
+
+  it "reverts to default builtin when reassigned by symbol" do
+    Sheen::Tree::Branch.root("r").child("a", "b")
+      .enumerator(:rounded).enumerator(:default).render.should eq(<<-TREE.rstrip)
+    r
+    ├── a
+    └── b
+    TREE
+  end
 end
 
 describe "Sheen::Tree styling DSL" do
