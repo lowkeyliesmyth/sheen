@@ -29,7 +29,7 @@ module Examples::Tree::Toggle
 
   def self.render : String
     tree = Sheen::Tree::Branch.root(DirNode.new("~/collection", true))
-      .enumerator(->Sheen::Tree.rounded_enumerator(Sheen::Tree::Children, Int32))
+      .enumerator(:rounded)
       .enumerator_style(ENUMERATOR)
       .child(
         DirNode.new("agates", false),
