@@ -16,6 +16,8 @@ Inspired by our friends at Charm who built [lipgloss](https://github.com/charmbr
 - **Built-in terminal primitives.** ANSI/SGR generation, color-space math and downsampling, color-profile detection, and Unicode-aware width measurement are included, so styling and layout behave correctly across terminals.
 - **CSS-like box model.** Padding, margins, width, height, alignment, and borders compose the way you expect.
 - **Layout primitives.** Join blocks horizontally or vertically, place content inside sized boxes, and measure rendered dimensions.
+- **Tables, lists, and trees.** Higher-level components for tabular data, ordered and unordered lists with custom enumerators, and nested tree views.
+
 
 ## Installation
 
@@ -239,9 +241,56 @@ style    = Sheen::Style.new(renderer)
 io << style.render("client-specific output")
 ```
 
-## Coming next
+### Tables
 
-Table, list, and tree rendering sub-packages are WIP, fam.
+Create tables with borders, per-cell styling, and automatic column sizing. 
+
+```crystal
+table = Sheen::Table.new
+  .border(Sheen::Border.rounded)
+  .headers("LANGUAGE", "PARADIGM")
+  .row("Crystal", "compiled")
+  .row("Ruby", "interpreted")
+  .style do |row, _col|
+    row == Sheen::Table::HEADER_ROW ? Sheen::Style.new.bold : Sheen::Style.new
+  end
+
+puts table.render
+```
+
+### Lists
+
+Build ordered or unordered lists, pick one of the built-in enumerators or use a custom one. Nest lists inside lists to create List-ception if you want to.
+
+```crystal
+list = Sheen::List.new
+  .enumerator(:roman)
+  .item("Crystal")
+  .item(Sheen::List.new("Compiled", "Typed", "Ergonomic", "Fast").enumerator(:dash))
+  .item("Python")
+
+puts list.render
+```
+
+Built-in enumerators: `:alpha`, `:arabic`, `:asterisk`, `:bullet` (the default), `:dash`, and `:roman`.
+
+### Trees
+
+Build nested trees. A rootless child auto-nests under its previous sibling, so the structure looks the way you write it.
+
+```crystal
+tree = Sheen::Tree::Branch.root("src")
+  .child("main.cr")
+  .child(
+    Sheen::Tree::Branch.new.root("sheen")
+      .child("style.cr")
+      .child("table.cr")
+  )
+
+puts tree.render
+```
+
+Swap the default connectors for rounded corners with `.enumerator(:rounded)`.
 
 ## Development
 
