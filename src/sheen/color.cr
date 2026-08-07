@@ -82,7 +82,7 @@ module Sheen
               when .true_color? then @true_color
               when .ansi256?    then @ansi256
               when .ansi?       then @ansi
-              else                   return nil
+              else                   return
               end
       Sheen.resolve_value(value, profile)
     end
@@ -124,13 +124,13 @@ module Sheen
   #
   # Returns nil for empty/invalid value or a colorless profile.
   def self.resolve_value(value : String, profile : Foundation::Profile) : Foundation::SGRColor?
-    return nil if value.empty? || profile.no_tty? || profile.ascii?
+    return if value.empty? || profile.no_tty? || profile.ascii?
 
     if value.starts_with?("#")
       Foundation.downsample(Foundation::RGB.parse(value), profile)
     else
       index = value.to_i?
-      return nil unless index && 0 <= index <= 255
+      return unless index && 0 <= index <= 255
       degrade_index(index, profile)
     end
   rescue ArgumentError

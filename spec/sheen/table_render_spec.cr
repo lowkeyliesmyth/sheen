@@ -45,11 +45,11 @@ describe "Sheen::Table#render" do
 
   it "renders headers with a separator and no data rows" do
     lang_table.render.should eq(<<-TABLE.rstrip)
-  ┌──────────┬──────┬──────────┐
-  │ LANGUAGE │ KIND │ GREETING │
-  ├──────────┼──────┼──────────┤
-  └──────────┴──────┴──────────┘
-  TABLE
+      ┌──────────┬──────┬──────────┐
+      │ LANGUAGE │ KIND │ GREETING │
+      ├──────────┼──────┼──────────┤
+      └──────────┴──────┴──────────┘
+      TABLE
   end
 
   it "renders a markdown border with the top and bottom rules off" do
@@ -58,24 +58,24 @@ describe "Sheen::Table#render" do
       .border_top(false)
       .border_bottom(false)
       .render.should eq(<<-TABLE.rstrip)
-      | NAME  | AGE |
-      |-------|-----|
-      | Alice | 30  |
-      | Bob   | 25  |
-      TABLE
+        | NAME  | AGE |
+        |-------|-----|
+        | Alice | 30  |
+        | Bob   | 25  |
+        TABLE
   end
 
   it "renders an ASCII border" do
     people_table
       .border(Sheen::Border.ascii)
       .render.should eq(<<-TABLE.rstrip)
-      +-------+-----+
-      | NAME  | AGE |
-      +-------+-----+
-      | Alice | 30  |
-      | Bob   | 25  |
-      +-------+-----+
-      TABLE
+        +-------+-----+
+        | NAME  | AGE |
+        +-------+-----+
+        | Alice | 30  |
+        | Bob   | 25  |
+        +-------+-----+
+        TABLE
   end
 
   it "applies per-column alignment through the style block" do
@@ -90,13 +90,13 @@ describe "Sheen::Table#render" do
         col == 1 ? style.align(Sheen::Position::RIGHT) : style
       end
       .render.should eq(<<-TABLE.rstrip)
-      ┌──────┬───────┐
-      │ LEFT │ RIGHT │
-      ├──────┼───────┤
-      │ a    │     b │
-      │ ccc  │   DDD │
-      └──────┴───────┘
-      TABLE
+        ┌──────┬───────┐
+        │ LEFT │ RIGHT │
+        ├──────┼───────┤
+        │ a    │     b │
+        │ ccc  │   DDD │
+        └──────┴───────┘
+        TABLE
   end
 
   it "wraps cell content wider than the column and grows the row height" do
@@ -105,11 +105,11 @@ describe "Sheen::Table#render" do
       .row("one two three")
       .style { |_row, _col| Sheen::Style.new.padding(0, 1).width(9) }
       .render.should eq(<<-TABLE.rstrip)
-      ┌─────────┐
-      │ one two │
-      │ three   │
-      └─────────┘
-      TABLE
+        ┌─────────┐
+        │ one two │
+        │ three   │
+        └─────────┘
+        TABLE
   end
 
   it "treats a CRLF line break the same as a newline" do
@@ -118,10 +118,10 @@ describe "Sheen::Table#render" do
       .row("Sub\r\nMarine")
       .style { |_row, _col| Sheen::Style.new.padding(0, 1).width(8) }
       .render.should eq(<<-TABLE.rstrip)
-      ┌────────┐
-      │ Sub    │
-      │ Marine │
-      └────────┘
-      TABLE
+        ┌────────┐
+        │ Sub    │
+        │ Marine │
+        └────────┘
+        TABLE
   end
 end

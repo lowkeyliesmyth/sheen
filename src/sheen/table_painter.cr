@@ -71,7 +71,7 @@ module Sheen
     end
 
     # Builds the truncated and styled header cells plus the header separator row.
-    private def construct_headers : String # ameba:disable Metrics/CyclomaticComplexity
+    private def construct_headers : String
       border = @table.border
       headers = @table.headers
       String.build do |io|

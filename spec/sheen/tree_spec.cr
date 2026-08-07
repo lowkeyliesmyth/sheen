@@ -34,7 +34,7 @@ describe Sheen::Tree::NodeChildren do
 
   it "removes by index, shifting the remainder" do
     children = Sheen::Tree::NodeChildren.new
-    %w(a b c).each { |v| children.append(Sheen::Tree::Leaf.new(v)) }
+    %w[a b c].each { |v| children.append(Sheen::Tree::Leaf.new(v)) }
     children.remove(1)
     children.length.should eq(2)
     children.at(1).try(&.value).should eq("c")
@@ -98,7 +98,7 @@ end
 describe "Sheen::Tree enumerators and indenters" do
   it "default_enumerator branches only on the last child" do
     kids = Sheen::Tree::NodeChildren.new
-    %w(a b c).each { |v| kids.append(Sheen::Tree::Leaf.new(v)) }
+    %w[a b c].each { |v| kids.append(Sheen::Tree::Leaf.new(v)) }
     Sheen::Tree.default_enumerator(kids, 0).should eq("├──")
     Sheen::Tree.default_enumerator(kids, 1).should eq("├──")
     Sheen::Tree.default_enumerator(kids, 2).should eq("└──")
@@ -119,19 +119,19 @@ describe "Sheen::Tree enumerators and indenters" do
   it "selects the rounded builtin by symbol" do
     Sheen::Tree::Branch.root("r").child("a", "b")
       .enumerator(:rounded).render.should eq(<<-TREE.rstrip)
-      r
-      ├── a
-      ╰── b
-      TREE
+        r
+        ├── a
+        ╰── b
+        TREE
   end
 
   it "reverts to default builtin when reassigned by symbol" do
     Sheen::Tree::Branch.root("r").child("a", "b")
       .enumerator(:rounded).enumerator(:default).render.should eq(<<-TREE.rstrip)
-    r
-    ├── a
-    └── b
-    TREE
+        r
+        ├── a
+        └── b
+        TREE
   end
 end
 
@@ -211,12 +211,12 @@ describe "Sheen::Tree::Branch#render" do
       .child("Foo", Sheen::Tree::Branch.root("Bar").child("Qux", "Qux-2"), "Baz")
       .enumerator(->Sheen::Tree.rounded_enumerator(Sheen::Tree::Children, Int32))
     tree.render.should eq(<<-TREE.rstrip)
-    ├── Foo
-    ├── Bar
-    │   ├── Qux
-    │   ╰── Qux-2
-    ╰── Baz
-    TREE
+      ├── Foo
+      ├── Bar
+      │   ├── Qux
+      │   ╰── Qux-2
+      ╰── Baz
+      TREE
   end
 
   it "prints the root value when set" do
@@ -242,12 +242,12 @@ describe "Sheen::Tree::Branch#render" do
       "Baz",
     )
     tree.render.should eq(<<-TREE.rstrip)
-    ├── Foo
-    ├── Bar
-    │   ├── Qux
-    │   └── Qux-3
-    └── Baz
-    TREE
+      ├── Foo
+      ├── Bar
+      │   ├── Qux
+      │   └── Qux-3
+      └── Baz
+      TREE
   end
 
   it "renders an entirely hidden tree as an empty string" do
@@ -306,22 +306,22 @@ describe "Sheen::Tree::Branch#render" do
     )
 
     trimmed(tree.render).should eq(<<-TREE.rstrip)
-    Big
-    Root
-    Node
-    ├── Foo
-    ├── Bar
-    │   ├── Line1
-    │   │   Line2
-    │   │   Line3
-    │   │   Line4
-    │   ├── Qux
-    │   │   ├── Foo-2
-    │   │   └── Bar-2
-    │   └── Qux-2
-    └── Baz
-        Baz Line2
-    TREE
+      Big
+      Root
+      Node
+      ├── Foo
+      ├── Bar
+      │   ├── Line1
+      │   │   Line2
+      │   │   Line3
+      │   │   Line4
+      │   ├── Qux
+      │   │   ├── Foo-2
+      │   │   └── Bar-2
+      │   └── Qux-2
+      └── Baz
+          Baz Line2
+      TREE
   end
 
   it "uses a subtree's own enumerator config, overriding the parents" do
@@ -333,13 +333,13 @@ describe "Sheen::Tree::Branch#render" do
     )
 
     tree.render.should eq(<<-TREE.rstrip)
-    root
-    ├── a
-    ├── sub
-    │   ├── x
-    │   ╰── y
-    └── b
-    TREE
+      root
+      ├── a
+      ├── sub
+      │   ├── x
+      │   ╰── y
+      └── b
+      TREE
   end
 end
 
@@ -378,11 +378,11 @@ describe Sheen::Tree::Filter do
     filter = Sheen::Tree::Filter.new(data).filter { |_node, index| index != 3 }
     tree = Sheen::Tree::Branch.root("Root").child(filter)
     tree.render.should eq(<<-TREE.rstrip)
-    Root
-    ├── Foo
-    ├── Bar
-    └── Baz
-    TREE
+      Root
+      ├── Foo
+      ├── Bar
+      └── Baz
+      TREE
   end
 
   it "passes every node through until a predicate is set" do

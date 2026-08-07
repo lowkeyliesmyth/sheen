@@ -2,7 +2,7 @@ require "../examples"
 
 module Examples::List::Monsters
   # A checklist of pokemon to catch, those already in the collection are checked off.
-  ACQUIRED = %w(Caterpie Rattata Charmander Zapdos Nidoking Tyranitar)
+  ACQUIRED = %w[Caterpie Rattata Charmander Zapdos Nidoking Tyranitar]
 
   DIM       = Sheen::Style.new.foreground(Sheen.color("240")).margin_right(1)
   HIGHLIGHT = Sheen::Style.new.foreground(Sheen.color("#00d787")).margin_right(1)

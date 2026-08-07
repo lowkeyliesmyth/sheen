@@ -53,7 +53,7 @@ module Sheen
 
       # The node at *index*, or nil when out of range.
       def at(index : Int32) : Node?
-        return nil if index < 0
+        return if index < 0
         @nodes[index]?
       end
 
@@ -82,7 +82,7 @@ module Sheen
 
       # The *index*-th passing node, or nil if out of range.
       def at(index : Int32) : Node?
-        return nil if index < 0
+        return if index < 0
         passing = 0
         @data.length.times do |i|
           node = @data.at(i)

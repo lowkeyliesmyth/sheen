@@ -96,8 +96,6 @@ module Foundation
       IndexedColor.new(nearest(rgb, ANSI256_LAB, 16, 256))
     when .ansi?
       BasicColor.new(nearest(rgb, BASE_16_LAB, 0, 16))
-    else
-      nil
     end
   end
 

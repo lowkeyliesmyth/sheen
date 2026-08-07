@@ -23,10 +23,10 @@ module Sheen
   # The background color extracted from `COLORFGBG` or nil when the var is absent or unparsable.  The last `;`-separated field is the ANSI background index.
   private def self.background_from_env(env : Foundation::Env) : Foundation::RGB?
     fgbg = env["COLORFGBG"]?
-    return nil unless fgbg && fgbg.includes?(';')
+    return unless fgbg && fgbg.includes?(';')
 
     index = fgbg.split(';').last.to_i?
-    return nil unless index && (0..255).includes?(index)
+    return unless index && (0..255).includes?(index)
     Foundation::Palette::ANSI256[index]
   end
 
@@ -40,8 +40,8 @@ module Sheen
   #
   # Guarded to real TTYs only, and any failures (timeout, unsupported term, parsing error, etc.) return nil instead of raising so callers fall back to the heuristic cleanly.
   private def self.background_from_query(input : IO, output : IO) : Foundation::RGB?
-    return nil unless input.is_a?(IO::FileDescriptor) && output.is_a?(IO::FileDescriptor)
-    return nil unless input.tty? && output.tty?
+    return unless input.is_a?(IO::FileDescriptor) && output.is_a?(IO::FileDescriptor)
+    return unless input.tty? && output.tty?
 
     response = ""
 
@@ -80,10 +80,10 @@ module Sheen
   # Returns nil for any non-color reply.
   def self.parse_osc_color(response : String) : Foundation::RGB?
     body = response.lchop("\e]11;").rchop('\a').rchop("\e\\")
-    return nil unless body.starts_with?("rgb:")
+    return unless body.starts_with?("rgb:")
 
     channels = body.lchop("rgb:").split('/')
-    return nil unless channels.size == 3 && channels.all? { |chn| chn.size >= 2 }
+    return unless channels.size == 3 && channels.all? { |chn| chn.size >= 2 }
     Foundation::RGB.parse("#" + channels.map(&.[0, 2]).join)
   rescue
     nil

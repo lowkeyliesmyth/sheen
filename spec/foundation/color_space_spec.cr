@@ -132,7 +132,7 @@ describe Foundation::Lab do
     end
 
     it "round-trips RGB -> Lab -> RGB within +/-1 per channel" do
-      %w(#000000 #ffffff #ff0000 #7d56f4 #43bf6d #14f9d6).each do |hex|
+      %w[#000000 #ffffff #ff0000 #7d56f4 #43bf6d #14f9d6].each do |hex|
         original = Foundation::RGB.parse(hex)
         result = original.to_lab.to_rgb
         result.r.should be_close(original.r, 1)

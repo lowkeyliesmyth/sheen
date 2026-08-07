@@ -18,7 +18,7 @@ module Sheen
     end
 
     # Renders *strings* through the bound style. Joins bound content, applies transforms, normalizes, applies the SGR core, shapes the block (padding, height, alignment, border, margins), then applies width+height limits.
-    def render(strings : Array(String)) : String
+    def render(strings : Array(String)) : String # ameba:disable Metrics/CyclomaticComplexity
       parts = strings.dup
       parts.unshift(@style.value) unless @style.value.empty?
       content = parts.join(' ')
@@ -59,7 +59,7 @@ module Sheen
     end
 
     # Builds the opening SGR sequence for the style's rules, or "" if none emit.
-    private def sgr_sequence : String # ameba:disable Metrics/CyclomaticComplexity
+    private def sgr_sequence : String
       builder = Foundation::Style.new
       builder.bold if @style.bold?
       builder.faint if @style.faint?

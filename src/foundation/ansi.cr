@@ -203,13 +203,13 @@ module Foundation
     case tokens[i + 1]?
     when "5"
       n = tokens[i + 2]?.try(&.to_u8?)
-      return nil unless n
+      return unless n
       {IndexedColor.new(n).as(SGRColor), 3}
     when "2"
       r = tokens[i + 2]?.try(&.to_u8?)
       g = tokens[i + 3]?.try(&.to_u8?)
       b = tokens[i + 4]?.try(&.to_u8?)
-      return nil unless r && g && b
+      return unless r && g && b
       {RGBColor.new(r, g, b).as(SGRColor), 5}
     end
   end

@@ -29,7 +29,7 @@ module Sheen
     macro storage(*decls)
       def initialize(
         {% for d in decls %}
-          @{{d[0].id}} : {{d[1]}} = {{d[2]}},
+          @{{ d[0].id }} : {{ d[1] }} = {{ d[2] }},
         {% end %}
       )
       end
@@ -39,97 +39,97 @@ module Sheen
       # This is the engine behind every setter.
       protected def copy_with(
         {% for d in decls %}
-          {{d[0].id}} = @{{d[0].id}},
+          {{ d[0].id }} = @{{ d[0].id }},
         {% end %}
       ) : Style
         Style.new(
           {% for d in decls %}
-            {{d[0].id}}: {{d[0].id}},
+            {{ d[0].id }}: {{ d[0].id }},
           {% end %}
         )
       end
     end
 
     macro unset_prop(name)
-      # True when {{name.id}} has been explicitly set
-      def {{name.id}}_set? : Bool
-        !@{{name.id}}.nil?
+      # True when {{ name.id }} has been explicitly set
+      def {{ name.id }}_set? : Bool
+        !@{{ name.id }}.nil?
       end
 
-      # Returns a new Style with {{name.id}} returned to the unset (inheritable) state.
-      def unset_{{name.id}} : Style
-        copy_with({{name.id}}: nil)
+      # Returns a new Style with {{ name.id }} returned to the unset (inheritable) state.
+      def unset_{{ name.id }} : Style
+        copy_with({{ name.id }}: nil)
       end
     end
 
     # Emits the setters and `?` getter for a boolean property.
     macro bool_prop(name)
-      # Enables or disables {{name.id}}.
+      # Enables or disables {{ name.id }}.
       # Returns a new Style
-      def {{name.id}}(value : Bool = true) : Style
-        copy_with({{name.id}}: value)
+      def {{ name.id }}(value : Bool = true) : Style
+        copy_with({{ name.id }}: value)
       end
 
-      # True when {{name.id}} is enabled.
-      def {{name.id}}? : Bool
-        @{{name.id}} == true
+      # True when {{ name.id }} is enabled.
+      def {{ name.id }}? : Bool
+        @{{ name.id }} == true
       end
 
-      unset_prop({{name}})
+      unset_prop({{ name }})
     end
 
     # Emits the setter and getter for a color property.
     #
     # Defaults to NoColor when unset.
     macro color_prop(name)
-      # Sets {{name.id}} from a `TerminalColor`, hex string, or ANSI index.
+      # Sets {{ name.id }} from a `TerminalColor`, hex string, or ANSI index.
       # Returns a new Style
-      def {{name.id}}(color : TerminalColor | String | Int) : Style
-        copy_with({{name.id}}: Sheen.color(color))
+      def {{ name.id }}(color : TerminalColor | String | Int) : Style
+        copy_with({{ name.id }}: Sheen.color(color))
       end
 
-      # The {{name.id}} color, or `NoColor` when unset.
-      def {{name.id}} : TerminalColor
-        @{{name.id}} || NoColor.new
+      # The {{ name.id }} color, or `NoColor` when unset.
+      def {{ name.id }} : TerminalColor
+        @{{ name.id }} || NoColor.new
       end
 
-      unset_prop({{name}})
+      unset_prop({{ name }})
     end
 
     # Emits the setter and getter for an Int32 property.
     #
     # Defaults to 0 when unset
     macro int_prop(name)
-      # Sets {{name.id}} to *n*.
+      # Sets {{ name.id }} to *n*.
       # Returns a new Style
-      def {{name.id}}(n : Int32) : Style
-        copy_with({{name.id}}: n)
+      def {{ name.id }}(n : Int32) : Style
+        copy_with({{ name.id }}: n)
       end
 
-      # The {{name.id}} value, or 0 when unset.
-      def {{name.id}} : Int32
-        @{{name.id}} || 0
+      # The {{ name.id }} value, or 0 when unset.
+      def {{ name.id }} : Int32
+        @{{ name.id }} || 0
       end
 
-      unset_prop({{name}})
+      unset_prop({{ name }})
     end
 
     # Emits the setter and getter for a Position property.
     #
     # *default* when unset.
     macro position_prop(name, default)
-      # Sets {{name.id}} to *pos*.
+      # Sets {{ name.id }} to *pos*.
       # Returns a new Style.
-      def {{name.id}}(pos : Position) : Style
-        copy_with({{name.id}}: pos)
+      def {{ name.id }}(pos : Position) : Style
+        copy_with({{ name.id }}: pos)
       end
 
-      # The {{name.id}} position, or `{{default}}` when unset.
-      def {{name.id}} : Position
-        @{{name.id}} || {{default}}
+      # The {{ name.id }} position, or `{{ default }}` when unset.
+      def {{ name.id }} : Position
+        @{{ name.id }} || {{ default }}
       end
 
-      unset_prop({{name}})
+      unset_prop({{ name }})
     end
 
     # The single source of truth for the property fields. `nil` means unset.
@@ -272,7 +272,7 @@ module Sheen
                        "border_left_background",
                        "transform",
                      ] %}
-    inherited = inherited.copy_with({{name.id}}: other.@{{name.id}}) if @{{name.id}}.nil?
+    inherited = inherited.copy_with({{ name.id }}: other.@{{ name.id }}) if @{{ name.id }}.nil?
         {% end %}
 
       # A background also seeds the margin background, but only if neither style sets one.
@@ -585,7 +585,7 @@ module Sheen
 
       # Forward any setter call to the wrapped Style, storing the new Style.
       macro method_missing(call)
-        @style = @style.{{call}}
+        @style = @style.{{ call }}
         self
       end
     end

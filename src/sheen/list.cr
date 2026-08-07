@@ -8,7 +8,7 @@ module Sheen
   #
   # `List` is a wrapper over `Tree`, and all styling methods delegate to the wrapped `Tree`. Items become tree children (lol) and a nested `List` nests as a subtree.
   class List
-    ROMAN_SYMBOLS = %w(M CM D CD C XC L XL X IX V IV I)
+    ROMAN_SYMBOLS = %w[M CM D CD C XC L XL X IX V IV I]
     ROMAN_VALUES  = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1]
     ALPHA_LEN     = 26
 

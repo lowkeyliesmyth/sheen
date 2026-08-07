@@ -17,18 +17,18 @@ describe Sheen::List do
 
   it "accepts items from an array" do
     Sheen::List.new.items(["Foo", "Bar", "Baz"]).render.should eq(<<-LIST.rstrip)
-    • Foo
-    • Bar
-    • Baz
-    LIST
+      • Foo
+      • Bar
+      • Baz
+      LIST
   end
 
   it "renders variadic constructor items" do
     Sheen::List.new("1", "2", "3").render.should eq(<<-LIST.rstrip)
-    • 1
-    • 2
-    • 3
-    LIST
+      • 1
+      • 2
+      • 3
+      LIST
   end
 
   it "nests a sublist by autopromoting its previous sibling to its parent" do
@@ -57,15 +57,15 @@ describe Sheen::List do
       Sheen::List.new.item("Ehrmagerd its JertBurns"),
     )
     list.render.should eq(<<-LIST.rstrip)
-    • SUP
-      • vim
-      • emacs
-    • HI
-      • vscode
-      • zed
-    • YO
-      • Ehrmagerd its JertBurns
-    LIST
+      • SUP
+        • vim
+        • emacs
+      • HI
+        • vscode
+        • zed
+      • YO
+        • Ehrmagerd its JertBurns
+      LIST
   end
 
   it "reconciles multiline item heights" do
@@ -74,92 +74,92 @@ describe Sheen::List do
       .item("item2\nline2\nline3")
       .item("3")
     list.render.should eq(<<-LIST.rstrip)
-    • item1
-      line2
-      line3
-    • item2
-      line2
-      line3
-    • 3
-    LIST
+      • item1
+        line2
+        line3
+      • item2
+        line2
+        line3
+      • 3
+      LIST
   end
 end
 
 describe "Sheen::List enumerators" do
   it "alpha renders upcased letters" do
     enumerated(:alpha).should eq(<<-LIST.rstrip)
-    A. Foo
-    B. Bar
-    C. Baz
-    LIST
+      A. Foo
+      B. Bar
+      C. Baz
+      LIST
   end
 
   it "arabic renders numbers" do
     enumerated(:arabic).should eq(<<-LIST.rstrip)
-    1. Foo
-    2. Bar
-    3. Baz
-    LIST
+      1. Foo
+      2. Bar
+      3. Baz
+      LIST
   end
 
   it "roman right-aligns numerals to the widest prefix" do
     enumerated(:roman).should eq(<<-LIST.rstrip)
-      I. Foo
-     II. Bar
-    III. Baz
-    LIST
+        I. Foo
+       II. Bar
+      III. Baz
+      LIST
   end
 
   it "bullet renders bullets" do
     enumerated(:bullet).should eq(<<-LIST.rstrip)
-    • Foo
-    • Bar
-    • Baz
-    LIST
+      • Foo
+      • Bar
+      • Baz
+      LIST
   end
 
   it "asterisk renders asterisks" do
     enumerated(:asterisk).should eq(<<-LIST.rstrip)
-    * Foo
-    * Bar
-    * Baz
-    LIST
+      * Foo
+      * Bar
+      * Baz
+      LIST
   end
 
   it "dash renders dashes" do
     enumerated(:dash).should eq(<<-LIST.rstrip)
-    - Foo
-    - Bar
-    - Baz
-    LIST
+      - Foo
+      - Bar
+      - Baz
+      LIST
   end
 
   it "accepts a custom enumerator block" do
     list = Sheen::List.new("Foo", "Bar", "Baz").enumerator { |_items, _i| "?" }
     list.render.should eq(<<-LIST.rstrip)
-    ? Foo
-    ? Bar
-    ? Baz
-    LIST
+      ? Foo
+      ? Bar
+      ? Baz
+      LIST
   end
 
   it "accepts a custom enumerator as an Enumerator proc" do
     enumr = ->(_items : Sheen::Tree::Children, _i : Int32) { "?" }
     Sheen::List.new("Foo", "Bar", "Baz").enumerator(enumr).render.should eq(<<-LIST.rstrip)
-    ? Foo
-    ? Bar
-    ? Baz
-    LIST
+      ? Foo
+      ? Bar
+      ? Baz
+      LIST
   end
 
   it "right-aligns a custom enumerator of varying width" do
     list = Sheen::List.new("Duck", "Duck", "Goose")
       .enumerator { |_items, i| i % 2 == 1 ? "Goose:" : "Duck:" }
     list.render.should eq(<<-LIST.rstrip)
-     Duck: Duck
-    Goose: Duck
-     Duck: Goose
-    LIST
+       Duck: Duck
+      Goose: Duck
+       Duck: Goose
+      LIST
   end
 
   it "never invokes a custom enumerator on an empty list" do
@@ -199,8 +199,8 @@ describe "Sheen::List styling" do
     list = Sheen::List.new("foo", "bar")
       .item_style(Sheen::Style.new.transform(&.upcase))
     list.render.should eq(<<-LIST.rstrip)
-    • FOO
-    • BAR
-    LIST
+      • FOO
+      • BAR
+      LIST
   end
 end
