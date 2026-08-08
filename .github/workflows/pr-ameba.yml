@@ -24,7 +24,7 @@ on:
       - ".ameba.yml"
       - ".github/workflows/pr-ameba.yml"
 env:
-  CRYSTAL_VERSION: "1.20.1"
+  CRYSTAL_VERSION: "1.21.0"
 
 jobs:
   ameba:
