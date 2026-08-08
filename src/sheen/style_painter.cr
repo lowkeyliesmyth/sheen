@@ -17,6 +17,12 @@ module Sheen
       @style.renderer
     end
 
+    # True when the active profile must not emit any SGR, either color or styling attributes.
+    private def sgr_suppressed? : Bool
+      profile = renderer.color_profile
+      profile.no_tty? || profile.ascii?
+    end
+
     # Renders *strings* through the bound style. Joins bound content, applies transforms, normalizes, applies the SGR core, shapes the block (padding, height, alignment, border, margins), then applies width+height limits.
     def render(strings : Array(String)) : String # ameba:disable Metrics/CyclomaticComplexity
       parts = strings.dup
@@ -58,16 +64,20 @@ module Sheen
       end
     end
 
-    # Builds the opening SGR sequence for the style's rules, or "" if none emit.
-    private def sgr_sequence : String
+    # Builds the opening SGR sequence for the style's rules. Or "" if ehter none emit or this profile suppresses SGR sequences.
+    private def sgr_sequence : String # ameba:disable Metrics/CyclomaticComplexity
+      return "" if sgr_suppressed?
+
       builder = Foundation::Style.new
-      builder.bold if @style.bold?
-      builder.faint if @style.faint?
-      builder.italic if @style.italic?
-      builder.underline if @style.underline?
-      builder.reverse if @style.reverse?
-      builder.blink if @style.blink?
-      builder.strikethrough if @style.strikethrough?
+      case
+      when @style.bold?          then builder.bold
+      when @style.faint?         then builder.faint
+      when @style.italic?        then builder.italic
+      when @style.underline?     then builder.underline
+      when @style.reverse?       then builder.reverse
+      when @style.blink?         then builder.blink
+      when @style.strikethrough? then builder.strikethrough
+      end
 
       if @style.foreground_set? && (fg = @style.foreground.resolve(renderer))
         builder.foreground(fg)
@@ -109,7 +119,11 @@ module Sheen
     end
 
     # True when spaces must be styled separately from the surrounding text. Eg decoration should, or should not, extend across them.
+    #
+    # Always false on profiles that suppress SGR.
     private def use_space_styler? : Bool
+      return false if sgr_suppressed?
+
       (@style.underline? && !spaces_underlined?) ||
         (@style.strikethrough? && !spaces_struck?) ||
         spaces_underlined? || spaces_struck?
@@ -134,7 +148,11 @@ module Sheen
 
     # SGR sequence for individual space runes when the space styler is active.
     # Holds the foreground+background styling plus the space-appropriate styling attributes only (underline + strikethrough).
+    #
+    # Empty when the profile suppresses SGR.
     private def space_sequence : String
+      return "" if sgr_suppressed?
+
       builder = Foundation::Style.new
       if @style.foreground_set? && (fg = @style.foreground.resolve(renderer))
         builder.foreground(fg)
@@ -185,7 +203,11 @@ module Sheen
     end
 
     # SGR sequence for styling margin whitespace, background only. This is a separate sequence styler than `whitespace_sequence`.
+    # Empty when the profile suppresses SGR.
     private def margin_sequence : String
+      # This guard should never be necessary since the only input is a resolved bg, and color resolution already yeilds nothing under NoTTY/Ascii. But just to be safe.
+      return "" if sgr_suppressed?
+
       builder = Foundation::Style.new
       if @style.margin_background_set?
         if bg = @style.margin_background.try &.resolve(renderer)
@@ -206,7 +228,11 @@ module Sheen
     # - reverse whenever the style is reversed
     # - foreground only under reverse
     # - background only when color_whitespace is on
+    #
+    # Empty when the profile suppresses SGR.
     private def whitespace_sequence : String
+      return "" if sgr_suppressed?
+
       builder = Foundation::Style.new
       builder.reverse if @style.reverse?
       if @style.reverse? && @style.foreground_set? && (fg = @style.foreground.resolve(renderer))

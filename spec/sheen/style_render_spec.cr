@@ -20,6 +20,10 @@ private def render(style : Sheen::Style, *strings : String) : String
   Sheen::StylePainter.new(style).render(strings.to_a)
 end
 
+# Test helper
+# The two profiles that emit no SGR at all.
+private COLORLESS = {Foundation::Profile::Ascii, Foundation::Profile::NoTTY}
+
 describe "Sheen::StylePainter#render" do
   it "returns content untouched when no rules are set" do
     render(style, "hello").should eq("hello")
@@ -53,8 +57,12 @@ describe "Sheen::StylePainter#render" do
     render(style.reverse, "hi").should eq("\e[7mhi\e[0m")
   end
 
-  it "drops color under a colorless profile but keeps attributes" do
-    render(style(Foundation::Profile::Ascii).bold.foreground("#FF0000"), "hi").should eq("\e[1mhi\e[0m")
+  it "drops color and attributes under the ascii profile" do
+    render(style(Foundation::Profile::Ascii).bold.foreground("#FF0000"), "hi").should eq("hi")
+  end
+
+  it "drops color and attributes under a notty profile" do
+    render(style(Foundation::Profile::NoTTY).bold.foreground("#FF0000"), "hi").should eq("hi")
   end
 
   it "styles each line independently so styling does not bleed across newlines" do
@@ -257,6 +265,53 @@ describe "Sheen::StylePainter#render - borders" do
   end
 end
 
+describe "Sheen::StylePainter#render - colorless profiles" do
+  it "emits no SGR for any attribute or color" do
+    COLORLESS.each do |profile|
+      sty = style(profile).bold.faint.italic.underline.reverse.blink.strikethrough
+        .foreground("#FF0000").background("#00FF00")
+      render(sty, "hi").should eq("hi")
+    end
+  end
+
+  it "emits no SGR on the per-rune space styler path" do
+    COLORLESS.each do |profile|
+      render(style(profile).width(4).reverse.background(Sheen::RED), "hi").should eq("hi  ")
+    end
+  end
+
+  it "emits no SGR for alignment fill" do
+    COLORLESS.each do |profile|
+      render(style(profile).width(4).reverse.background(Sheen::RED), "hi").should eq("hi  ")
+    end
+  end
+
+  it "emits no SGR for margin fill" do
+    COLORLESS.each do |profile|
+      render(style(profile).margin(0, 2).margin_background(Sheen::RED), "hi").should eq("  hi  ")
+    end
+  end
+
+  it "keeps box-drawing characters while dropping the border color" do
+    COLORLESS.each do |profile|
+      render(style(profile).border(Sheen::Border.normal).border_foreground(Sheen::RED), "hi")
+        .should eq("┌──┐\n│hi│\n└──┘")
+    end
+  end
+
+  it "still runs the full layout pipeline when SGR is suppressed" do
+    COLORLESS.each do |profile|
+      sty = style(profile).width(6).padding(0, 1).border(Sheen::Border.normal).bold.foreground(Sheen::RED)
+      render(sty, "hi").should eq("┌──────┐\n│ hi   │\n└──────┘")
+    end
+  end
+
+  it "still truncates to max_width when SGR is suppressed" do
+    COLORLESS.each do |profile|
+      render(style(profile).max_width(3).bold, "hello").should eq("hel")
+    end
+  end
+end
 describe "Sheen::Style render delegation" do
   it "renders through Style#render" do
     style.bold.render("hi").should eq("\e[1mhi\e[0m")
