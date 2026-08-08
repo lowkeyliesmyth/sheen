@@ -9,7 +9,16 @@ on:
       - "spec/**"
       - "shard.yml"
       - "shard.lock"
-
+      - ".github/workflows/pr-spec.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "spec/**"
+      - "shard.yml"
+      - "shard.lock"
+      - ".github/workflows/pr-spec.yml"
 env:
   CRYSTAL_VERSION: "1.21.0"
 
