@@ -64,20 +64,18 @@ module Sheen
       end
     end
 
-    # Builds the opening SGR sequence for the style's rules. Or "" if ehter none emit or this profile suppresses SGR sequences.
+    # Builds the opening SGR sequence for the style's rules. Or "" if either none emit or this profile suppresses SGR sequences.
     private def sgr_sequence : String # ameba:disable Metrics/CyclomaticComplexity
       return "" if sgr_suppressed?
 
       builder = Foundation::Style.new
-      case
-      when @style.bold?          then builder.bold
-      when @style.faint?         then builder.faint
-      when @style.italic?        then builder.italic
-      when @style.underline?     then builder.underline
-      when @style.reverse?       then builder.reverse
-      when @style.blink?         then builder.blink
-      when @style.strikethrough? then builder.strikethrough
-      end
+      builder.bold if @style.bold?
+      builder.faint if @style.faint?
+      builder.italic if @style.italic?
+      builder.underline if @style.underline?
+      builder.reverse if @style.reverse?
+      builder.blink if @style.blink?
+      builder.strikethrough if @style.strikethrough?
 
       if @style.foreground_set? && (fg = @style.foreground.resolve(renderer))
         builder.foreground(fg)

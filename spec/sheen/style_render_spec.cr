@@ -49,6 +49,19 @@ describe "Sheen::StylePainter#render" do
     render(style(Foundation::Profile::ANSI).foreground(9), "hi").should eq("\e[91mhi\e[0m")
   end
 
+  it "emits every set attribute in a chain, not just the first" do
+    render(style.bold.faint, "hi").should eq("\e[1;2mhi\e[0m")
+  end
+
+  it "combines all attributes in the same order as the builder" do
+    sty = style.bold.faint.italic.reverse.blink
+    render(sty, "hi").should eq("\e[1;2;3;7;5mhi\e[0m")
+  end
+
+  it "styles each rune separately once the space styler is activated" do
+    render(style.bold.underline, "hi").should eq("\e[1;4mh\e[0m\e[1;4mi\e[0m")
+  end
+
   it "combines attributes and colors in builder order" do
     render(style.bold.foreground("#FF0000"), "hi").should eq("\e[1;38;2;255;0;0mhi\e[0m")
   end
