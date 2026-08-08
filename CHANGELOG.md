@@ -1,3 +1,9 @@
+## v0.1.3 (2026-08-08)
+
+### Bug Fixes
+
+- **style**: emit all combined text attributes in a chain, not just the first
+
 ## v0.1.2 (2026-08-08)
 
 ### Bug Fixes
