@@ -93,6 +93,12 @@
 - **gha**: fix shards install cache misses (#8)
 - **gha**: add gha workflows for test, release, coverage, and doc generation (#4)
 
+## v0.1.2 (2026-08-08)
+
+### Bug Fixes
+
+- **style**: suppress SGR  on non-tty profiles
+
 ## v0.1.1 (2026-08-08)
 
 ### Refactor
