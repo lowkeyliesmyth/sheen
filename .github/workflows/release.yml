@@ -25,7 +25,7 @@ on:
         default: false
 
 env:
-  CRYSTAL_VERSION: "1.20.1"
+  CRYSTAL_VERSION: "1.21.0"
 
 jobs:
   bump:
@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.cz.outputs.version }}
-      tag: ${{ steps.cz.outputs.version }}
+      tag: ${{ steps.cz.outputs.tag}}
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
