@@ -324,11 +324,11 @@ Ran into a problem? Issues are welcome. Or if you're inclined to file a PR, see 
 
 ## Contributors
 
-- [lowkey](https://github.com/lowkeyliesmyth) — creator and maintainer
+- [lowkey](https://github.com/lowkeyliesmyth) - creator and maintainer
  
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+MIT License - see [LICENSE](LICENSE) for details.
 
 ## References
 

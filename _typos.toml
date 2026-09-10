@@ -3,4 +3,6 @@
 hel = "hel"
 
 [files]
-extend-exclude = ["data/*/*.txt"]
+extend-exclude = [
+    "data/*/*.txt",
+    "CHANGELOG.md"]

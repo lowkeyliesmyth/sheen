@@ -203,7 +203,7 @@ module Sheen
     # SGR sequence for styling margin whitespace, background only. This is a separate sequence styler than `whitespace_sequence`.
     # Empty when the profile suppresses SGR.
     private def margin_sequence : String
-      # This guard should never be necessary since the only input is a resolved bg, and color resolution already yeilds nothing under NoTTY/Ascii. But just to be safe.
+      # This guard should never be necessary since the only input is a resolved bg, and color resolution already yields nothing under NoTTY/Ascii. But just to be safe.
       return "" if sgr_suppressed?
 
       builder = Foundation::Style.new
