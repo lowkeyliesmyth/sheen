@@ -2,11 +2,44 @@
 version: "3"
 
 tasks:
-  spec:
-    desc: Run Crystal specs
+  actionlint:
+    desc: Lint GitHub Actions workflows
     cmds:
-      #- crystal spec --order random
-      - crystal spec
+      - zizmor .
+
+  actionlint:fix:
+    desc: Analyze and fix GHA workflows
+    cmds:
+      - zizmor . --fix=all
+
+  coverage:
+    desc: Run code coverage
+    cmds:
+      - scripts/coverage.sh
+
+  default:
+    desc: Run default spec-lint checks
+    deps: [spec, lint]
+
+  docs:
+    desc: Generates API usage docs from inline docstrings
+    cmds:
+      - crystal docs
+
+  example:
+    desc: Render one example to STDOUT (task example -- <name>)
+    cmds:
+      - crystal run examples/main.cr -- {{.CLI_ARGS}}
+
+  examples:
+    desc: Render every example to STDOUT
+    cmds:
+      - crystal run examples/main.cr -- all
+
+  examples:check:
+    desc: Type-check example consumers without running them
+    cmds:
+      - crystal build examples/main.cr --no-codegen
 
   lint:
     desc: Run Ameba linter
@@ -30,41 +63,13 @@ tasks:
     cmds:
       - bin/ameba --fix
 
-  coverage:
-    desc: Run code coverage
+  spec:
+    desc: Run Crystal specs
     cmds:
-      - scripts/coverage.sh
-
-  actionlint:
-    desc: Lint GitHub Actions workflows
-    cmds:
-      - actionlint
+      #- crystal spec --order random
+      - crystal spec
 
   unicode:
     desc: Download and generate unicode tables
     cmds:
       - crystal run scripts/gen_unicode.cr
-
-  example:
-    desc: Render one example to STDOUT (task example -- <name>)
-    cmds:
-      - crystal run examples/main.cr -- {{.CLI_ARGS}}
-
-  examples:
-    desc: Render every example to STDOUT
-    cmds:
-      - crystal run examples/main.cr -- all
-
-  examples:check:
-    desc: Type-check example consumers without running them
-    cmds:
-      - crystal build examples/main.cr --no-codegen
-
-  docs:
-    desc: Generates API usage docs from inline docstrings
-    cmds:
-      - crystal docs
-
-  default:
-    desc: Run default spec-lint checks
-    deps: [spec, lint]
