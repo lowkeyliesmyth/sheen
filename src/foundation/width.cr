@@ -156,27 +156,27 @@ module Foundation
       @out.to_s
     end
 
-    # Appends a breakpoint grapheme: kept inline if it fits otherwise deferred into the current word so it wraps with the following text
+    # Process a breakpoint **grapheme** mid-word. Keeps it inline if it fits the width constraints, otherwise defers to the next word buffer.
     private def add_break_point(grapheme : String) : Nil
-      w = Foundation.grapheme_width(grapheme)
+      bp_width = Foundation.grapheme_width(grapheme)
       flush_space
-      if @line_width + @word_width + w > @width
+      if @line_width + @word_width + bp_width > @width
         @word += grapheme
-        @word_width += w
+        @word_width += bp_width
       else
         flush_word
         @out << grapheme
-        @line_width += w
+        @line_width += bp_width
       end
     end
 
-    # Appends an ordinary grapheme, hard-breaking an over-length word and soft-wrapping at word boundaries.
+    # Append an ordinary **grapheme**, hard-break an over-length word and soft-wrap at word boundaries.
     private def add_word_char(grapheme : String) : Nil
       w = Foundation.grapheme_width(grapheme)
       flush_word if @word_width + w > @width
       @word += grapheme
       @word_width += w
-      new_line if @line_width + @word_width + @space_width > @width
+      new_line if @line_width > 0 && @line_width + @word_width + @space_width > @width
     end
 
     # Handles an explicit line break in the source
