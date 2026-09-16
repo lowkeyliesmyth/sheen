@@ -236,98 +236,84 @@ module Foundation
     Escape # any other escape sequence
   end
 
-  # Split **string** into ordered segments, returning `kind, content` for each segment.
-  # Text and various escape sequences are separated so callers can measure or slice up content without mangling embedded ANSI.
+  # Split **string** into ordered text and escape segments.
   #
-  # The rest of the string is treated like one big segment if there's an unterminated CSI/OSC sequence.
+  # Complete CSI and OSC sequences are yielded as atomic units. An unterminated CSI/OSC sequence consumes the remainder of the string and treats it as an opaque escape segment.
   def self.each_segment(string : String, & : SegmentKind, String ->) : Nil
-    text_start = 0
-    index = 0
+    cursor = 0
 
-    while index < string.bytesize
-      # hex value for ESC `\e` CSI sequence
-      unless string.byte_at(index) == 0x1B
-        index += 1
-        next
-      end
-
-      yield SegmentKind::Text, string.byte_slice(text_start, index - text_start) if index > text_start
-
-      escape_end, kind = escape_segment(string, index)
-      yield kind, string.byte_slice(index, escape_end - index)
-
-      index = escape_end
-      text_start = index
-    end
-
-    if text_start < string.bytesize
-      yield SegmentKind::Text, string.byte_slice(text_start, string.bytesize - text_start)
+    while cursor < string.bytesize
+      length, kind = next_segment(string, cursor)
+      yield kind, string.byte_slice(cursor, length)
+      cursor += length
     end
   end
 
-  # Classifies the escape sequence beginning at **start** byte index (`\e`) and returns the exclusive end byte position along with its `SegmentKind`.
-  #
-  # Dispatches to CSI, OSC, or a generic two-byte escape based on the introducer byte following the `\e`.
-  private def self.escape_segment(string : String, start : Int32) : Tuple(Int32, SegmentKind)
-    introducer = string.byte_at?(start + 1)
+  # Return the byte length and kind of the next segment beginning from **start** byte of **string**.
+  private def self.next_segment(string : String, start : Int32) : Tuple(Int32, SegmentKind)
+    unless string.byte_at?(start) == 0x1B # CSI `\e`
+      return {text_length(string, start), SegmentKind::Text}
+    end
 
-    case introducer
-    when 0x5B # char [
+    case string.byte_at?(start + 1)
+    when 0x05B # [
       csi_segment(string, start)
-    when 0x5D # char ]
-      {osc_end(string, start), SegmentKind::Osc}
+    when 0x05D # ]
+      osc_segment(string, start)
     else
-      {Math.min(start + 2, string.bytesize), SegmentKind::Escape}
+      {Math.min(2, string.bytesize - start), SegmentKind::Escape}
     end
   end
 
-  # Scans a CSI **string** segment from **start** through its final byte.
+  # Return the number of bytes before the next ESC or the end of the **string**, beginning from **start** byte.
+  private def self.text_length(string : String, start : Int32) : Int32
+    index = start + 1
+    while index < string.bytesize && string.byte_at(index) != 0x1B # CSI ESC `\e`
+      index += 1
+    end
+    index - start
+  end
+
+  # Return the byte length and kind of the CSI sequence **string**, beginning from **start** byte.
   #
-  # Returns the segment end position and kind.
+  # Returns as an Escape kind if the sequence never terminates or is interrupted by a new ESC sequence.
   private def self.csi_segment(string : String, start : Int32) : Tuple(Int32, SegmentKind)
     # Account for the leading `[`
     index = start + 2
 
     while index < string.bytesize
       byte = string.byte_at(index)
-      # Is this a CSI final byte?
+
+      # Abort a CSI when a new ESC arrives.
+      # Without this guard the scan would treat the next sequence's `[` (0x5B) as a final byte and leak its parameters as visible text
+      return {index - start, SegmentKind::Escape} if byte == 0x1B
+
+      # ANSI CSI sequence final bytes range
       if byte.in?(0x40..0x7E)
-        kind = byte == 0x6D ? SegmentKind::Sgr : SegmentKind::Escape # m
-        return {index + 1, kind}
+        kind = byte == 0x6D ? SegmentKind::Sgr : SegmentKind::Escape # `m` indicates successful SGR termination
+        return {index - start + 1, kind}
       end
       index += 1
     end
-
-    {string.bytesize, SegmentKind::Escape}
+    {string.bytesize - start, SegmentKind::Escape}
   end
 
-  # Scan an OSC **string** from **start** through BEL or the 7-bit ST sequence. Unterminated input consumes the remainder.
-  #
-  # Returns the osc_end index, or end of string if it's unterminated.
-  private def self.osc_end(string : String, start : Int32) : Int32
+  # Return the byte length and kind of the OSC sequence **string**, beginning from **start** byte.
+  private def self.osc_segment(string : String, start : Int32) : Tuple(Int32, SegmentKind)
     index = start + 2
 
     while index < string.bytesize
-      case string.byte_at(index)
-      when 0x07
-        return index + 1
-      when 0x1b
-        return index + 2 if string.byte_at?(index + 1) == 0x5c # \
+      byte = string.byte_at(index)
+
+      return {index - start + 1, SegmentKind::Osc} if byte == 0x07 # BEL `\a`
+
+      # ST OSC termination pair
+      if byte == 0x1B && string.byte_at?(index + 1) == 0x5C # `\`
+        return {index - start + 2, SegmentKind::Osc}
       end
+
       index += 1
     end
-
-    string.bytesize
-  end
-
-  # Classifies a complete escape **sequence** as SGR, OSC, or a generic escape kind.
-  private def self.classify_escape(seq : String) : SegmentKind
-    if seq.starts_with?("\e[")
-      seq.ends_with?('m') ? SegmentKind::Sgr : SegmentKind::Escape
-    elsif seq.starts_with?("\e]")
-      SegmentKind::Osc
-    else
-      SegmentKind::Escape
-    end
+    {string.bytesize - start, SegmentKind::Escape}
   end
 end
