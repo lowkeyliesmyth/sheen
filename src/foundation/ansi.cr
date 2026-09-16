@@ -286,7 +286,7 @@ module Foundation
 
       # Abort a CSI when a new ESC arrives.
       # Without this guard the scan would treat the next sequence's `[` (0x5B) as a final byte and leak its parameters as visible text
-      return {index - start, SegmentKind::Escape} if byte == 0x1B
+      return {index - start, SegmentKind::Escape} if byte == 0x1B # CSI ESC `\e`
 
       # ANSI CSI sequence final bytes range
       if byte.in?(0x40..0x7E)
@@ -299,6 +299,8 @@ module Foundation
   end
 
   # Return the byte length and kind of the OSC sequence **string**, beginning from **start** byte.
+  #
+  # Returns as an Escape kind if the sequence never terminates or is interrupted by an ESC that does not begin an ST.
   private def self.osc_segment(string : String, start : Int32) : Tuple(Int32, SegmentKind)
     index = start + 2
 
@@ -307,9 +309,13 @@ module Foundation
 
       return {index - start + 1, SegmentKind::Osc} if byte == 0x07 # BEL `\a`
 
-      # ST OSC termination pair
-      if byte == 0x1B && string.byte_at?(index + 1) == 0x5C # `\`
-        return {index - start + 2, SegmentKind::Osc}
+      if byte == 0x1B # CSI ESC `\e`
+        next_byte = string.byte_at?(index + 1)
+        # ST OSC termination pair
+        return {index - start + 2, SegmentKind::Osc} if next_byte == 0x5C # `\`
+        # An ESC followed by anything other than `\` starts a new sequence, so the OSC was interrupted.
+        # A trailing lone ESC is likely a truncated ST, so mark this as an Escape kind and leave it.
+        return {index - start, SegmentKind::Escape} if next_byte
       end
 
       index += 1

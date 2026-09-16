@@ -274,6 +274,21 @@ describe "#each_segment" do
     ])
   end
 
+  it "ends an interrupted OSC at the next non-ST ESC so the following sequence stays intact" do
+    segments = [] of {Foundation::SegmentKind, String}
+
+    Foundation.each_segment("a\e]8;;https://example.com\e[1mbold") do |kind, content|
+      segments << {kind, content}
+    end
+
+    segments.should eq([
+      {Foundation::SegmentKind::Text, "a"},
+      {Foundation::SegmentKind::Escape, "\e]8;;https://example.com"},
+      {Foundation::SegmentKind::Sgr, "\e[1m"},
+      {Foundation::SegmentKind::Text, "bold"},
+    ])
+  end
+
   it "classifies a non-SGR CSI sequence as Escape" do
     kinds = [] of Foundation::SegmentKind
     Foundation.each_segment("\e[2Jtext") do |kind, _c|
