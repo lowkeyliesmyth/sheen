@@ -138,38 +138,6 @@ describe "#cut" do
 end
 
 describe "#wrap" do
-  it "returns the string unchanged for width < 1" do
-    Foundation.wrap("foobar\n ", 0).should eq("foobar\n ")
-  end
-
-  it "passes through content that fits" do
-    Foundation.wrap("hello world", 11).should eq("hello world")
-  end
-
-  it "wraps on word boundaries" do
-    Foundation.wrap("foo bar baz", 4).should eq("foo\nbar\nbaz")
-  end
-
-  it "hard-breaks tokens longer than the width" do
-    Foundation.wrap("foobarbaz", 4).should eq("foob\narba\nz")
-  end
-
-  it "breaks long words mixed with spaces" do
-    Foundation.wrap("foo bars foobars", 4).should eq("foo\nbars\nfoob\nars")
-  end
-
-  it "treats hyphens as break points" do
-    Foundation.wrap("a-good-callofduty-cheat-code", 10).should eq("a-good-\ncallofduty-\ncheat-code")
-  end
-
-  it "wraps CJK by cells" do
-    Foundation.wrap("こんにち", 7).should eq("こんに\nち")
-  end
-
-  it "wraps complex emoji clusters" do
-    Foundation.wrap("😭💎🙌", 2).should eq("😭\n💎\n🙌")
-  end
-
   it "keeps styles attached to their words across breaks" do
     input = "I really \e[38;2;249;38;114mlove\e[0m pancakes!"
     Foundation.wrap(input, 8).should eq("I really\n\e[38;2;249;38;114mlove\e[0m\npancakes\n!")
@@ -189,11 +157,87 @@ describe "#wrap" do
     Foundation.wrap("\e[mfoo \e[m", 3).should eq("\e[mfoo\e[m")
   end
 
-  it "preserves explicit line breaks" do
-    Foundation.wrap("\nfoo bar\n\n\nfoo\n", 4).should eq("\nfoo\nbar\n\n\nfoo\n")
+  describe "user provided breakpoints" do
+    breakpoints = ",.-; "
+
+    it "wraps after each configured punctuation breakpoint" do
+      Foundation.wrap("foo,bar", 4, breakpoints).should eq("foo,\nbar")
+      Foundation.wrap("foo.bar", 4, breakpoints).should eq("foo.\nbar")
+      Foundation.wrap("foo-bar", 4, breakpoints).should eq("foo-\nbar")
+      Foundation.wrap("foo;bar", 4, breakpoints).should eq("foo;\nbar")
+      Foundation.wrap("foo bar", 4, breakpoints).should eq("foo\nbar")
+    end
+
+    it "keeps a breakpoint after an exact width word" do
+      Foundation.wrap("four,bar", 4, breakpoints).should eq("four,\nbar")
+    end
   end
 
-  it "wraps at a tab boundary" do
-    Foundation.wrap("foo\tbar", 3).should eq("foo\nbar")
+  describe "boundary behavior" do
+    it "returns empty input unchanged" do
+      Foundation.wrap("", 4).should eq("")
+    end
+
+    it "returns input unchanged for width < 1" do
+      Foundation.wrap("foobar\n ", 0).should eq("foobar\n ")
+      Foundation.wrap("foobar", -1).should eq("foobar")
+    end
+
+    it "passes through input that fits exactly as unchanged" do
+      Foundation.wrap("hello world", 11).should eq("hello world")
+    end
+
+    it "wraps on default breakpoint boundaries" do
+      Foundation.wrap("foo bar baz", 4).should eq("foo\nbar\nbaz")
+      Foundation.wrap("foo-bar-bizbaz", 3).should eq("foo-\nbar-\nbiz\nbaz")
+    end
+
+    it "hard-breaks tokens longer than the width" do
+      Foundation.wrap("foobarbaz", 4).should eq("foob\narba\nz")
+    end
+
+    it "hard-breaks when no configured breakpoint is available" do
+      Foundation.wrap("foobarba/z", 4, ",.-; ").should eq("foob\narba\n/z")
+    end
+
+    it "preserves source and consecutive newlines" do
+      Foundation.wrap("\nfoo bar\n\n\nfoo\n", 4).should eq("\nfoo\nbar\n\n\nfoo\n")
+    end
+
+    it "gives a grapheme wider than the limit its own line" do
+      Foundation.wrap("世a", 1).should eq("世\na")
+    end
+
+    it "wraps at a tab boundary" do
+      Foundation.wrap("foo\tbar", 4).should eq("foo\nbar")
+    end
+  end
+
+  describe "grapheme geometry" do
+    it "wraps CJK chars by terminal cells" do
+      Foundation.wrap("こんにち", 7).should eq("こんに\nち")
+    end
+
+    it "does not split a combining sequence" do
+      Foundation.wrap("e\u0301e\u0301", 1).should eq("e\u0301\ne\u0301")
+    end
+
+    it "wraps complex emoji clusters without splitting" do
+      Foundation.wrap("😭💎🙌", 2).should eq("😭\n💎\n🙌")
+    end
+
+    it "does not split a ZWJ cluster" do
+      Foundation.wrap("👨‍👩‍👧a", 2).should eq("👨‍👩‍👧\na")
+    end
+  end
+
+  describe "escape token boundaries" do
+    it "treats complete CSI and OSC sequences as indivisible and zero width" do
+      sgr = "\e[31m"
+      osc = "\e]8;;https://example.com\e\\"
+
+      Foundation.wrap("ab#{sgr}cd", 2).should eq("ab#{sgr}\ncd")
+      Foundation.wrap("ab#{osc}cd", 2).should eq("ab#{osc}\ncd")
+    end
   end
 end
