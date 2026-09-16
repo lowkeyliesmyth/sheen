@@ -195,35 +195,101 @@ end
 
 describe "#each_segment" do
   it "splits text and SGR sequences in order" do
-    segs = [] of {Foundation::SegmentKind, String}
-    Foundation.each_segment("\e[1mhi\e[0m") { |kind, content| segs << {kind, content} }
-    segs.should eq([
+    segments = [] of {Foundation::SegmentKind, String}
+    Foundation.each_segment("\e[1mhi\e[0m") do |kind, content|
+      segments << {kind, content}
+    end
+
+    segments.should eq([
       {Foundation::SegmentKind::Sgr, "\e[1m"},
       {Foundation::SegmentKind::Text, "hi"},
       {Foundation::SegmentKind::Sgr, "\e[0m"},
     ])
   end
 
-  it "classifies an OSC hyperlink as Osc" do
-    kinds = [] of Foundation::SegmentKind
-    Foundation.each_segment("\e]8;;http://example.com\e\\link\e]8;;\e\\") { |kind, _c| kinds << kind }
+  it "keeps a complete CSI sequence as an atomic unit" do
+    segments = [] of {Foundation::SegmentKind, String}
+
+    Foundation.each_segment("a\e[38;2;255;0;170mb") do |kind, content|
+      segments << {kind, content}
+    end
+
+    segments.should eq([
+      {Foundation::SegmentKind::Text, "a"},
+      {Foundation::SegmentKind::Sgr, "\e[38;2;255;0;170m"},
+      {Foundation::SegmentKind::Text, "b"},
+    ])
+  end
+
+  it "keeps an unterminated CSI and its remaining bytes as an atomic unit" do
+    segments = [] of {Foundation::SegmentKind, String}
+
+    Foundation.each_segment("a\e[31;2;255") do |kind, content|
+      segments << {kind, content}
+    end
+    segments.should eq([
+      {Foundation::SegmentKind::Text, "a"},
+      {Foundation::SegmentKind::Escape, "\e[31;2;255"},
+    ])
+  end
+
+  it "ends an interrupted CSI at the next ESC so the following sequence stays intact" do
+    segments = [] of {Foundation::SegmentKind, String}
+
+    Foundation.each_segment("a\e[31\e[0mb") do |kind, content|
+      segments << {kind, content}
+    end
+
+    segments.should eq([
+      {Foundation::SegmentKind::Text, "a"},
+      {Foundation::SegmentKind::Escape, "\e[31"},
+      {Foundation::SegmentKind::Sgr, "\e[0m"},
+      {Foundation::SegmentKind::Text, "b"},
+    ])
+  end
+
+  it "classifies an atomic OSC hyperlink unit as OSC" do
+    kinds = [] of {Foundation::SegmentKind, String}
+    Foundation.each_segment("\e]8;;http://example.com\e\\link\e]8;;\e\\") do |kind, content|
+      kinds << {kind, content}
+    end
+
     kinds.should eq([
-      Foundation::SegmentKind::Osc,
-      Foundation::SegmentKind::Text,
-      Foundation::SegmentKind::Osc,
+      {Foundation::SegmentKind::Osc, "\e]8;;http://example.com\e\\"},
+      {Foundation::SegmentKind::Text, "link"},
+      {Foundation::SegmentKind::Osc, "\e]8;;\e\\"},
+    ])
+  end
+
+  it "keeps an unterminated OSC and its remaining bytes as an atomic unit" do
+    segments = [] of {Foundation::SegmentKind, String}
+
+    Foundation.each_segment("a\e]8;;https://example.com;broken") do |kind, content|
+      segments << {kind, content}
+    end
+
+    segments.should eq([
+      {Foundation::SegmentKind::Text, "a"},
+      {Foundation::SegmentKind::Escape, "\e]8;;https://example.com;broken"},
     ])
   end
 
   it "classifies a non-SGR CSI sequence as Escape" do
     kinds = [] of Foundation::SegmentKind
-    Foundation.each_segment("\e[2Jtext") { |kind, _c| kinds << kind }
+    Foundation.each_segment("\e[2Jtext") do |kind, _c|
+      kinds << kind
+    end
+
     kinds.first.should eq(Foundation::SegmentKind::Escape)
   end
 
   it "yields a single text segment for plain context" do
-    segs = [] of {Foundation::SegmentKind, String}
-    Foundation.each_segment("hello") { |kind, content| segs << {kind, content} }
-    segs.should eq([{Foundation::SegmentKind::Text, "hello"}])
+    segments = [] of {Foundation::SegmentKind, String}
+    Foundation.each_segment("hello") do |kind, content|
+      segments << {kind, content}
+    end
+
+    segments.should eq([{Foundation::SegmentKind::Text, "hello"}])
   end
 
   it "yields nothing for an empty string" do
@@ -238,5 +304,18 @@ describe "#each_segment" do
       Foundation.each_segment(original) { |_k, content| io << content }
     end
     rebuilt.should eq(original)
+  end
+
+  it "reconstructs malformed unterminated input from segment contents" do
+    [
+      "a\e[31broken",
+      "a\e8;;https://example.com/broken",
+    ].each do |orig|
+      rebuilt = String.build do |io|
+        Foundation.each_segment(orig) { |_kind, content| io << content }
+      end
+
+      rebuilt.should eq(orig)
+    end
   end
 end
