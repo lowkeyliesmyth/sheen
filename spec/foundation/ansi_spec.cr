@@ -105,6 +105,10 @@ describe "#parse_sgr" do
       Foundation.parse_sgr("\e[39m").fg.should eq(Foundation::DefaultColor.new)
       Foundation.parse_sgr("\e[49m").bg.should eq(Foundation::DefaultColor.new)
     end
+
+    it "reconstructs a bright basic background" do
+      Foundation.parse_sgr("\e[101m").bg.should eq(Foundation::BasicColor.new(9_u8))
+    end
   end
 
   describe "extended color grouping" do
@@ -122,6 +126,14 @@ describe "#parse_sgr" do
 
     it "groups a truecolor background" do
       Foundation.parse_sgr("\e[48;2;255;0;170m").bg.should eq(Foundation::RGBColor.new(255_u8, 0_u8, 170_u8))
+    end
+
+    it "resumes reading SGR codes after completing extended colors" do
+      attrs = Foundation.parse_sgr("\e[38;5;63;1;48;2;1;2;3;4m")
+      attrs.fg.should eq(Foundation::IndexedColor.new(63_u8))
+      attrs.bg.should eq(Foundation::RGBColor.new(1_u8, 2_u8, 3_u8))
+      attrs.flags.should eq(Foundation::SGRFlags::Bold)
+      attrs.underline.should eq(Foundation::Underline::Single)
     end
   end
 
@@ -146,9 +158,37 @@ describe "#parse_sgr" do
     attrs.underline.should eq(Foundation::Underline::Single)
   end
 
+  describe "resets and selectively clears" do
+    it "treats an empty parameter list as a reset" do
+      Foundation.parse_sgr("\e[1;31m\e[m").should eq(FA.new(reset: true))
+    end
+
+    it "clears each set attribute with its matching 'off' code" do
+      Foundation.parse_sgr("\e[1;2;3;4;5;7;9m\e[22;23;24;25;27;29m").should eq(FA.new)
+    end
+
+    it "clears only the attribute that its equivalent off code targets" do
+      attrs = Foundation.parse_sgr("\e[1;3;4m\e[23m")
+      attrs.flags.should eq(Foundation::SGRFlags::Bold)
+      attrs.underline.should eq(Foundation::Underline::Single)
+    end
+  end
+
   describe "unknown parameters" do
-    it "preserves an unmodeled code verbatim" do
+    it "preserves an unknown SGR code as-is" do
       Foundation.parse_sgr("\e[53m").unknown.should eq(["53"])
+    end
+
+    it "preserves an unrecognized underline substyle as-is" do
+      attrs = Foundation.parse_sgr("\e[4:9m")
+      attrs.underline.should be_nil
+      attrs.unknown.should eq(["4:9"])
+    end
+
+    it "preserves a malformed extended color with colons as-is" do
+      attrs = Foundation.parse_sgr("\e[38:5:63m")
+      attrs.fg.should be_nil
+      attrs.unknown.should eq(["38:5:63"])
     end
   end
 
