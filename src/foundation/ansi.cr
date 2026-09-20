@@ -147,7 +147,11 @@ module Foundation
       tokens = params.split(';')
       index = 0
       while index < tokens.size
-        index += apply_token(tokens, index)
+        consumed = apply_token(tokens, index)
+        # Raise on the possibility of a parser bug being introduced in the future (not malformed input BTW) which should never happen, but because it's challenging to test for such a bug let's make sure it never escapes and raise here just in case it does happen.
+        # This loop works in steady state because every `apply_token` branch consumes at least 1 token. Any non-positive return would spin this loop (and the caller's terminal) forever, so raising with the token that stalled is less bad than choking forever.
+        raise "BUG: apply_token consumed #{consumed} tokens at #{tokens[index].inspect} in #{params.inspect}" if consumed < 1
+        index += consumed
       end
     end
 
@@ -213,9 +217,14 @@ module Foundation
     #
     # Associate and consume the following 8-bit IndexedColor (`5;n`) or 24-bit TrueColor (`2;r;g;b`) subtokens following the introducer token. Return the total number of tokens consumed across both introducer and subtokens.
     #
-    # If subtokens are missing or invalid then only the introducer is consumed and is classified as `@unknown`.
+    # If subtokens are missing or invalid then *only the introducer* is consumed and is classified as `@unknown`. Remaining leftover subtokens are re-read as ordinary SGR sequences.
+    # Why? Because consuming the whole group would append to the single shared `@unknown` entry, be flattened by `Attributes#to_s` and reparsed in a new potentially valid but nondeterministic new combination with broadly unexpected results.
     private def apply_extended_color(tokens : Array(String), index : Int32, foreground : Bool) : Int32
-      case tokens[index + 1]
+      case tokens[index + 1]?
+      #  ITU's T.416 subtype 0( "implementation-defined",  wtf even is that) and 1 (transparent) are not actually used by Sheen so are safe to eat, and don't have extra parameters so have a standard width making them low-effort to handle here. So eat these erroneous subtokens and group them with the introducer token to prevent an accidental (eg `\e[38;0m`) state clearing by processing SGR 0 on its own.
+      when "0", "1"
+        @unknown << tokens[index, 2].join(';')
+        return 2
       when "5"
         if n = u8_at(tokens, index + 2)
           set_color(IndexedColor.new(n), foreground)

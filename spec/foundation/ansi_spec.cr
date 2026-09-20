@@ -190,9 +190,29 @@ describe "#parse_sgr" do
       attrs.fg.should be_nil
       attrs.unknown.should eq(["38:5:63"])
     end
+
+    it "keeps an unused extended color subtype from accidentally resetting accrued SGR state" do
+      attrs = Foundation.parse_sgr("\e[1;38;0m")
+      attrs.flags.bold?.should be_true
+      attrs.reset.should be_false
+      attrs.unknown.should eq(["38;0"])
+    end
   end
 
   describe "malformed sequences do not raise" do
+    it "tolerates an extended color introducer with no subtokens" do
+      Foundation.parse_sgr("\e[1;38m").unknown.should eq(["38"])
+    end
+
+    # This is the lesser of two weevils, see `SGRState#apply_extended_color` comment for more details.
+    # Basically a malformed extended foreground color missing the SGR token representing the IndexedColor to set the foreground to has its "5" subtoken mistakenly applied as "enable blink".
+    it "re-reads a malformed extended color's subtokens as ordinary SGR codes" do
+      attrs = Foundation.parse_sgr("\e[38;5m")
+      attrs.fg.should be_nil
+      attrs.flags.blink?.should be_true
+      attrs.unknown.should eq(["38"])
+    end
+
     it "tolerates a sequence with no terminator" do
       Foundation.parse_sgr("\e[1").should eq(FA.new)
     end
@@ -228,7 +248,12 @@ describe "Attributes round-trip" do
     Foundation.parse_sgr(attrs.to_s).should eq(attrs)
   end
 
-  it "collapses a duped attribute to its canonical form" do
+  it "is stable when folding in multple unknown parameters" do
+    attrs = Foundation.parse_sgr("\e[38m\e[53m")
+    attrs.unknown.should eq(["38", "53"])
+  end
+
+  it "collapses a duped attribute to last-applied" do
     Foundation.parse_sgr("\e[1;1m").to_s.should eq("\e[1m")
   end
 end
