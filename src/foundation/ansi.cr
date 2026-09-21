@@ -40,7 +40,7 @@ module Foundation
   # SGR 24-bit truecolor value
   record RGBColor, r : UInt8, g : UInt8, b : UInt8 # -> 38;2;r;g;b (fg) / 48;2;r;g;b (bg)
 
-  # The terminal default fg/bg (SGR 39 / 49)
+  # The terminal default fg/bg (SGR 39 / 49). Is a sentinel type used to distinguish explicit default colors from actively defined overrides.
   struct DefaultColor
   end
 
@@ -153,6 +153,53 @@ module Foundation
         raise "BUG: apply_token consumed #{consumed} tokens at #{tokens[index].inspect} in #{params.inspect}" if consumed < 1
         index += consumed
       end
+    end
+
+    # Parse and apply one complete SGR **sequence**.
+    #
+    # Ignores any input that isn't exactly one complete single SGR sequence.
+    def apply_sequence(sequence : String) : Nil
+      return unless match = SGR_PATTERN.match(sequence)
+      return unless match[0] == sequence
+
+      apply(match[1])
+    end
+
+    # Return whether or not the current accumulated state has "active" styling that has to be reset by the line boundary so it doesn't bleed over.
+    def active? : Bool
+      @flags != SGRFlags::None ||
+        active_underline? ||
+        active_color?(@fg) ||
+        active_color?(@bg)
+    end
+
+    # Return a standard SGR sequence that recreates the effective accumulated state.
+    #
+    # "Reset", unknown params, explicit references to default colors, and `Underline::None` don't need restoration after a reset so they aren't included in this recreation.
+    def sequence : String # ameba:disable Metrics/CyclomaticComplexity
+      style = Style.new
+
+      style.bold if @flags.bold?
+      style.faint if @flags.faint?
+      style.italic if @flags.italic?
+      style.reverse if @flags.reverse?
+      style.strikethrough if @flags.strikethrough?
+
+      if underline = @underline
+        unless underline.none?
+          underline.single? ? style.underline : style.underline_style(underline)
+        end
+      end
+
+      if color = @fg
+        style.foreground(color) unless color.is_a?(DefaultColor)
+      end
+
+      if color = @bg
+        style.background(color) unless color.is_a?(DefaultColor)
+      end
+
+      style.to_s
     end
 
     # Record accumulated SGR state as an `Attributes` object.
@@ -270,6 +317,16 @@ module Foundation
     # Return **tokens** at the **index** position as a `UInt8` if valid, or `nil` if invalid.
     private def u8_at(tokens : Array(String), index : Int32) : UInt8?
       tokens[index]?.try(&.to_u8?)
+    end
+
+    # Return whether **color** is an actively defined color override or not.
+    private def active_color?(color : SGRColor?) : Bool
+      !color.nil? && !color.is_a?(DefaultColor)
+    end
+
+    # Assess and return whether an underline state is an actively defined underline or not.
+    private def active_underline? : Bool
+      @underline.try(&.none?) || false
     end
   end
 
