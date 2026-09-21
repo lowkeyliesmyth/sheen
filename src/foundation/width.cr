@@ -9,6 +9,10 @@ module Foundation
   # Variation Selector-16 forces wide emoji presentation
   private VARIATION_SELECTOR_16 = 0xFE0F
 
+  # Default set of characters that are used to identify if a token can be split across lines.
+  # A whitespace character is conspicuously absent here, but it's fine as that is assessed just prior to breakpoint processing in `.consume`
+  private DEFAULT_BREAKPOINTS = "-"
+
   # Return the terminal cell-width of a single **grapheme** cluster:
   #
   # - 0 for zero-width control/combining
@@ -115,7 +119,9 @@ module Foundation
     truncate_left(truncate(string, finish, ""), start, "")
   end
 
-  # Accumulates wrapped output one grapheme at a time. Holds the committed outputs plus the pending word and whitespace runs, so word boundaries and hard-breaks can be decided as content streams in.
+  # Accumulates wrapped output one grapheme at a time. Keeps track of what's already been written along with the pending buffered word and whitespace so word boundaries and hard-breaks can be decided as text streams in.
+  #
+  # Characters that can be considered as breakpoints for mid-word wrapping are provided by callers as a list of characters in a String. DEFAULT_BREAKPOINTS are always considered non-overrideable breakpoints.
   private class Wrapper
     # Non-breaking space. Treated as a word character and never as a break
     NBSP = 0xA0
@@ -230,7 +236,7 @@ module Foundation
       @space_width = 0
     end
 
-    # A whitespace grapheme that is not a non-breaking space
+    # Assess if this is a whitespace grapheme that is not a Non-Breaking-SPace char.
     private def space?(grapheme : String) : Bool
       chr = grapheme[0]
       chr.whitespace? && chr.ord != NBSP
@@ -238,9 +244,10 @@ module Foundation
 
     # Checks if this **grapheme** is a breakpoint.
     #
-    # A hyphen (always and by default) or any configured breakpoint character returns true. Otherwise false.
+    # Any members of DEFAULT_BREAKPOINTS or any configured breakpoint character returns true. Otherwise false.
     private def break_point?(grapheme : String) : Bool
-      grapheme == "-" || @breakpoints.each_char.any? { |brk| grapheme.includes?(brk) }
+      DEFAULT_BREAKPOINTS.includes?(grapheme) ||
+        @breakpoints.includes?(grapheme)
     end
   end
 
@@ -248,7 +255,7 @@ module Foundation
   #
   # ANSI escape sequences and OSC8 hyperlinks are preserved across breaks.
   # A hyphen is always a breakpoint, as well as any character passed in **breakpoints**.
-  def self.wrap(string : String, width : Int32, breakpoints : String = " -") : String
+  def self.wrap(string : String, width : Int32, breakpoints : String = DEFAULT_BREAKPOINTS) : String
     return string if width < 1
 
     wrapper = Wrapper.new(width, breakpoints)

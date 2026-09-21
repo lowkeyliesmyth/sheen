@@ -157,6 +157,10 @@ describe "#wrap" do
     Foundation.wrap("\e[mfoo \e[m", 3).should eq("\e[mfoo\e[m")
   end
 
+  it "still honors default breakpoints when custom breakpoints are provided" do
+    Foundation.wrap("foo-bar-baz", 4, ",").should eq("foo-\nbar-\nbaz")
+  end
+
   describe "user provided breakpoints" do
     breakpoints = ",.-; "
 
