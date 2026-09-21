@@ -133,9 +133,11 @@ module Foundation
       @word_width = 0
       @space = ""
       @space_width = 0
+      @sgr_state = SGRState.new
+      @pending_sgr = [] of String
     end
 
-    # Feeds one **grapheme** cluster of visible text.
+    # Feed one **grapheme** cluster of visible text.
     #
     # Processes newline, whitespace, and breakpoint characters appropriately. Any other character is treated as part of the current word.
     def consume(grapheme : String) : Nil
@@ -152,15 +154,19 @@ module Foundation
       end
     end
 
-    # Feeds an escape **sequence**, which attaches to the current word without affecting its width.
-    def add_escape(sequence : String) : Nil
+    # Buffer an escape **sequence**, which attaches to the curent word withotu affecting its width.
+    #
+    # SGR state stays pending until the word containing the sequence is committed to output which means we know which line it's rendered on.
+    def consume_escape(kind : SegmentKind, sequence : String) : Nil
       @word += sequence
+      @pending_sgr << sequence if kind.sgr?
     end
 
-    # Returns the wrapped result, flushing any pending word and trailing space.
+    # Return the wrapped result, flushing any pending word and trailing space, and closing out active SGR state.
     def finish : String
       flush_trailing_space
       flush_word
+      close_sgr
       @out.to_s
     end
 
@@ -208,26 +214,42 @@ module Foundation
       reset_space
     end
 
-    # Commit the pending word to output, preceded by any pending space.
+    # Commit the pending word and its SGR state, preceded by any pending space, to output.
     private def flush_word : Nil
       return if @word.empty?
+
       flush_space
       @out << @word
+      @pending_sgr.each { |sequence| @sgr_state.apply_sequence(sequence) }
       @line_width += @word_width
       reset_word
     end
 
-    # Emit a newline and resets the current line width and pending space.
+    # Close active SGR state, emit a newline, and then restore that SGR state at the start of the newline.
+    # Because it's a newline, the current line width and pending space get reset.
     private def new_line : Nil
+      close_sgr
       @out << '\n'
+      restore_sgr
       @line_width = 0
       reset_space
     end
 
-    # Clear the pending word buffer and its accumulated width.
+    # Close out the accumulated active SGR state so it can't leak past the line boundary.
+    private def close_sgr : Nil
+      @out << RESET_STYLE if @sgr_state.active?
+    end
+
+    # Reconstruct the previous active accumulated SGR state after successfully passing a newline boundary.
+    private def restore_sgr : Nil
+      @out << @sgr_state.sequence if @sgr_state.active?
+    end
+
+    # Clear the pending word buffer, its accumulated width, and its uncommitted SGR sequences.
     private def reset_word : Nil
       @word = ""
       @word_width = 0
+      @pending_sgr.clear
     end
 
     # Clears the pending space buffer and its accumulated width.
@@ -263,7 +285,7 @@ module Foundation
       if kind.text?
         content.each_grapheme { |grapheme| wrapper.consume(grapheme.to_s) }
       else
-        wrapper.add_escape(content)
+        wrapper.consume_escape(kind, content)
       end
     end
     wrapper.finish
