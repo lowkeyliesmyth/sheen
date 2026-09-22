@@ -203,6 +203,14 @@ describe "#wrap" do
       input = "\e[31mred\e[0m"
       Foundation.wrap(input, 10).should eq(input)
     end
+
+    it "restores every active bool attribute" do
+      input = "\e[1;2;3;5;7;9mab\e[0m"
+      expected = "\e[1;2;3;5;7;9ma\e[0m\n" +
+                 "\e[1;2;3;5;7;9mb\e[0m"
+
+      Foundation.wrap(input, 1).should eq(expected)
+    end
   end
 
   describe "user provided breakpoints" do

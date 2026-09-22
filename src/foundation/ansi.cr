@@ -182,6 +182,7 @@ module Foundation
       style.bold if @flags.bold?
       style.faint if @flags.faint?
       style.italic if @flags.italic?
+      style.blink if @flags.blink?
       style.reverse if @flags.reverse?
       style.strikethrough if @flags.strikethrough?
 
