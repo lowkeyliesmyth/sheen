@@ -144,8 +144,11 @@ describe "#wrap" do
   end
 
   it "treats a non-breaking space as part of a word" do
-    input = "\e[38;2;249;38;114ma really\u00A0long string\e[0m"
-    expected = "\e[38;2;249;38;114ma\nreally\u00A0lon\ng string\e[0m"
+    color = "\e[38;2;249;38;114m"
+    input = "#{color}a really\u00A0long string\e[0m"
+    expected = "#{color}a\e[0m\n" +
+               "#{color}really\u00A0lon\e[0m\n" +
+               "#{color}g string\e[0m"
     Foundation.wrap(input, 10).should eq(expected)
   end
 
@@ -159,6 +162,47 @@ describe "#wrap" do
 
   it "still honors default breakpoints when custom breakpoints are provided" do
     Foundation.wrap("foo-bar-baz", 4, ",").should eq("foo-\nbar-\nbaz")
+  end
+
+  describe "SGR state boundaries" do
+    it "closes and restores active state across one injected wrap" do
+      input = "\e[31mabcd\e[0m"
+      expected = "\e[31mab\e[0m\n\e[31mcd\e[0m"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "closes and restores active state across multiple injected wraps" do
+      input = "\e[31mabcdef\e[0m"
+      expected = "\e[31mab\e[0m\n" +
+                 "\e[31mcd\e[0m\n" +
+                 "\e[31mef\e[0m"
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "balances active state across consecutive input newlines" do
+      input = "\e[31ma\n\nb\e[0m"
+      expected = "\e[31ma\e[0m\n" +
+                 "\e[31m\e[0m\n" +
+                 "\e[31mb\e[0m"
+      Foundation.wrap(input, 10).should eq(expected)
+    end
+
+    it "does not leak buffered SGR state to the previous line" do
+      input = "aa \e[31mbb"
+      expected = "aa\n\e[31mbb\e[0m"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "adds a closing reset when input leaves SGR state active" do
+      Foundation.wrap("\e[31mred", 10).should eq("\e[31mred\e[0m")
+    end
+
+    it "does not add a reset if source input clears out SGR state" do
+      input = "\e[31mred\e[0m"
+      Foundation.wrap(input, 10).should eq(input)
+    end
   end
 
   describe "user provided breakpoints" do
@@ -240,7 +284,7 @@ describe "#wrap" do
       sgr = "\e[31m"
       osc = "\e]8;;https://example.com\e\\"
 
-      Foundation.wrap("ab#{sgr}cd", 2).should eq("ab#{sgr}\ncd")
+      Foundation.wrap("ab#{sgr}cd", 2).should eq("ab#{sgr}\e[0m\n#{sgr}cd\e[0m")
       Foundation.wrap("ab#{osc}cd", 2).should eq("ab#{osc}\ncd")
     end
   end
