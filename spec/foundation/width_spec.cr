@@ -211,6 +211,67 @@ describe "#wrap" do
 
       Foundation.wrap(input, 1).should eq(expected)
     end
+
+    it "does not restore state when cleared by a full reset" do
+      input = "\e[1;31ma\e[0mbc"
+      expected = "\e[1;31ma\e[0mb\nc"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "does not restore attributes that were closed by a selective reset" do
+      input = "\e[1;3;31mab\e[23mcd\e[0m"
+      expected = "\e[1;3;31mab\e[23m\e[0m\n" +
+                 "\e[1;31mcd\e[0m"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "restores underline, fg, and bg state" do
+      style = "\e[3;4;38;5;63;48;2;1;2;3m"
+      input = "#{style}ab\e[0m"
+      expected = "#{style}a\e[0m\n#{style}b\e[0m"
+      Foundation.wrap(input, 1).should eq(expected)
+    end
+
+    it "does not restore underline after a selective underline reset" do
+      input = "\e[4:3;31mab\e[24mcd"
+      expected = "\e[4:3;31mab\e[24m\e[0m\n" +
+                 "\e[31mcd\e[0m"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "restores an intermediate replacement style applied before the boundary" do
+      input = "\e[31mab\e[34mcd\e[0m"
+      expected = "\e[31mab\e[34m\e[0m\n" +
+                 "\e[34mcd\e[0m"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "restores committed state before applying its replacement style on the next line" do
+      input = "\e[31mab \e[34mcd\e[0m"
+      expected = "\e[31mab\e[0m\n" +
+                 "\e[31m\e[34mcd\e[0m"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "restores background state if fg returns to default" do
+      input = "\e[31;44mab\e[39mcd"
+      expected = "\e[31;44mab\e[39m\e[0m\n" +
+                 "\e[44mcd\e[0m"
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "keeps a styled breakpoint on its source line" do
+      input = "\e[31mab-cd\e[0m"
+      expected = "\e[31mab-\e[0m\n" +
+                 "\e[31mcd\e[0m"
+
+      Foundation.wrap(input, 3).should eq(expected)
+    end
   end
 
   describe "user provided breakpoints" do
