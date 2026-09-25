@@ -154,7 +154,7 @@ module Foundation
       end
     end
 
-    # Buffer an escape **sequence**, which attaches to the curent word withotu affecting its width.
+    # Buffer an escape **sequence**, which attaches to the current word without affecting its width.
     #
     # SGR state stays pending until the word containing the sequence is committed to output which means we know which line it's rendered on.
     def consume_escape(kind : SegmentKind, sequence : String) : Nil

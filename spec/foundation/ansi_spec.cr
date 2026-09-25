@@ -248,7 +248,7 @@ describe "Attributes round-trip" do
     Foundation.parse_sgr(attrs.to_s).should eq(attrs)
   end
 
-  it "is stable when folding in multple unknown parameters" do
+  it "is stable when folding in multiple unknown parameters" do
     attrs = Foundation.parse_sgr("\e[38m\e[53m")
     attrs.unknown.should eq(["38", "53"])
   end
