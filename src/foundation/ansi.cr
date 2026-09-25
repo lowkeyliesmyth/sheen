@@ -325,9 +325,70 @@ module Foundation
       !color.nil? && !color.is_a?(DefaultColor)
     end
 
-    # Assess and return whether an underline state is an actively defined underline or not.
+    # Assess and return whether an underline state is an actively defined `Underline` or not.
     private def active_underline? : Bool
-      @underline.try(&.none?) || false
+      @underline.try { |underline| !underline.none? } || false
+    end
+  end
+
+  # Track the effective OSC8 hyperlink state across source sequences.
+  private class OSC8State
+    SYNTHETIC_CLOSE = "\e]8;;\a"
+
+    @params = ""
+    @uri = ""
+
+    # Parse and apply one complete OSC8 **sequence**.
+    #
+    # An empty URI closes the active link, and both invalid/non-OSC8 sequences are ignored.
+    def apply_sequence(sequence : String) : Nil
+      return unless sequence.starts_with?("\e]8;")
+      return unless size = terminator_size(sequence)
+
+      payload_size = sequence.bytesize - 4 - size
+      return if payload_size < 1
+
+      fields = sequence.byte_slice(4, payload_size).split(';', 2)
+      return unless fields.size == 2
+
+      params, uri = fields
+      if uri.empty?
+        clear
+      else
+        @params = params
+        @uri = uri
+      end
+    end
+
+    # Return whether a hyperlink is currently active.
+    def active? : Bool
+      !@uri.empty?
+    end
+
+    # Return a BEL-terminated sequence that restores the active hyperlink.
+    def sequence : String
+      return "" unless active?
+
+      "\e]8;#{@params};#{@uri}\a"
+    end
+
+    # Return a BEL-terminated sequence that closes the active hyperlink.
+    def close_sequence : String
+      active? ? SYNTHETIC_CLOSE : ""
+    end
+
+    # Clear the current hyperlink state
+    private def clear : Nil
+      @params = ""
+      @uri = ""
+    end
+
+    # Return the width of a supported OSC terminator.
+    private def terminator_size(sequence : String) : Int32?
+      return 1 if sequence.ends_with?("\a")
+      return ST.bytesize if sequence.ends_with?(ST)
+
+      nil
     end
   end
 
