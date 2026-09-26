@@ -406,5 +406,49 @@ describe "#wrap" do
         "#{source_open}linked\e]8;;\a"
       )
     end
+
+    it "handles active hyperlink across consecutive newlines" do
+      source_open = "\e]8;;https://example.com\e\\"
+      source_close = "\e]8;;\e\\"
+      synthetic_open = "\e]8;;https://example.com\a"
+      synthetic_close = "\e]8;;\a"
+
+      input = "#{source_open}a\n\nb#{source_close}"
+      expected = "#{source_open}a#{synthetic_close}\n" \
+                 "#{synthetic_open}#{synthetic_close}\n" \
+                 "#{synthetic_open}b#{source_close}"
+
+      Foundation.wrap(input, 10).should eq(expected)
+    end
+
+    it "restores the committed link before applying its replacement on the next line" do
+      first = "\e]8;id=one;https://example.com/one\e\\"
+      second = "\e]8;id=two;https://example.com/two\e\\"
+      source_close = "\e]8;;\e\\"
+      synthetic_first = "\e]8;id=one;https://example.com/one\a"
+      synthetic_close = "\e]8;;\a"
+
+      input = "#{first}ab #{second}cd#{source_close}"
+      expected = "#{first}ab#{synthetic_close}\n" \
+                 "#{synthetic_first}#{second}cd#{source_close}"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "preserves a trailing OSC 8 sequence and closes its resulting state" do
+      source_open = "\e]8;;https://example.com\e\\"
+
+      Foundation.wrap("ab#{source_open}", 10).should eq(
+        "ab#{source_open}\e]8;;\a"
+      )
+    end
+
+    it "does not interpret another OSC command as hyperlink state" do
+      set_title = "\e]0;Example title\a"
+
+      Foundation.wrap("ab#{set_title}cd", 2).should eq(
+        "ab#{set_title}\ncd"
+      )
+    end
   end
 end
