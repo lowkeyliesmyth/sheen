@@ -274,90 +274,6 @@ describe "#wrap" do
     end
   end
 
-  describe "user provided breakpoints" do
-    breakpoints = ",.-; "
-
-    it "wraps after each configured punctuation breakpoint" do
-      Foundation.wrap("foo,bar", 4, breakpoints).should eq("foo,\nbar")
-      Foundation.wrap("foo.bar", 4, breakpoints).should eq("foo.\nbar")
-      Foundation.wrap("foo-bar", 4, breakpoints).should eq("foo-\nbar")
-      Foundation.wrap("foo;bar", 4, breakpoints).should eq("foo;\nbar")
-      Foundation.wrap("foo bar", 4, breakpoints).should eq("foo\nbar")
-    end
-
-    it "keeps a breakpoint after an exact width word" do
-      Foundation.wrap("four,bar", 4, breakpoints).should eq("four,\nbar")
-    end
-  end
-
-  describe "boundary behavior" do
-    it "returns empty input unchanged" do
-      Foundation.wrap("", 4).should eq("")
-    end
-
-    it "returns input unchanged for width < 1" do
-      Foundation.wrap("foobar\n ", 0).should eq("foobar\n ")
-      Foundation.wrap("foobar", -1).should eq("foobar")
-    end
-
-    it "passes through input that fits exactly as unchanged" do
-      Foundation.wrap("hello world", 11).should eq("hello world")
-    end
-
-    it "wraps on default breakpoint boundaries" do
-      Foundation.wrap("foo bar baz", 4).should eq("foo\nbar\nbaz")
-      Foundation.wrap("foo-bar-bizbaz", 3).should eq("foo-\nbar-\nbiz\nbaz")
-    end
-
-    it "hard-breaks tokens longer than the width" do
-      Foundation.wrap("foobarbaz", 4).should eq("foob\narba\nz")
-    end
-
-    it "hard-breaks when no configured breakpoint is available" do
-      Foundation.wrap("foobarba/z", 4, ",.-; ").should eq("foob\narba\n/z")
-    end
-
-    it "preserves source and consecutive newlines" do
-      Foundation.wrap("\nfoo bar\n\n\nfoo\n", 4).should eq("\nfoo\nbar\n\n\nfoo\n")
-    end
-
-    it "gives a grapheme wider than the limit its own line" do
-      Foundation.wrap("世a", 1).should eq("世\na")
-    end
-
-    it "wraps at a tab boundary" do
-      Foundation.wrap("foo\tbar", 4).should eq("foo\nbar")
-    end
-  end
-
-  describe "grapheme geometry" do
-    it "wraps CJK chars by terminal cells" do
-      Foundation.wrap("こんにち", 7).should eq("こんに\nち")
-    end
-
-    it "does not split a combining sequence" do
-      Foundation.wrap("e\u0301e\u0301", 1).should eq("e\u0301\ne\u0301")
-    end
-
-    it "wraps complex emoji clusters without splitting" do
-      Foundation.wrap("😭💎🙌", 2).should eq("😭\n💎\n🙌")
-    end
-
-    it "does not split a ZWJ cluster" do
-      Foundation.wrap("👨‍👩‍👧a", 2).should eq("👨‍👩‍👧\na")
-    end
-  end
-
-  describe "escape token boundaries" do
-    it "treats complete CSI and OSC sequences as indivisible and zero width" do
-      sgr = "\e[31m"
-      osc = "\e]8;;https://example.com\e\\"
-
-      Foundation.wrap("ab#{sgr}cd", 2).should eq("ab#{sgr}\e[0m\n#{sgr}cd\e[0m")
-      Foundation.wrap("ab#{osc}cd", 2).should eq("ab#{osc}\e]8;;\a\n\e]8;;https://example.com\acd\e]8;;\a")
-    end
-  end
-
   describe "OSC8 state boundaries" do
     it "closes and restores a hyperlink across one inserted wrap" do
       source_open = "\e]8;id=abc;https://example.com\e\\"
@@ -449,6 +365,90 @@ describe "#wrap" do
       Foundation.wrap("ab#{set_title}cd", 2).should eq(
         "ab#{set_title}\ncd"
       )
+    end
+  end
+
+  describe "user provided breakpoints" do
+    breakpoints = ",.-; "
+
+    it "wraps after each configured punctuation breakpoint" do
+      Foundation.wrap("foo,bar", 4, breakpoints).should eq("foo,\nbar")
+      Foundation.wrap("foo.bar", 4, breakpoints).should eq("foo.\nbar")
+      Foundation.wrap("foo-bar", 4, breakpoints).should eq("foo-\nbar")
+      Foundation.wrap("foo;bar", 4, breakpoints).should eq("foo;\nbar")
+      Foundation.wrap("foo bar", 4, breakpoints).should eq("foo\nbar")
+    end
+
+    it "keeps a breakpoint after an exact width word" do
+      Foundation.wrap("four,bar", 4, breakpoints).should eq("four,\nbar")
+    end
+  end
+
+  describe "boundary behavior" do
+    it "returns empty input unchanged" do
+      Foundation.wrap("", 4).should eq("")
+    end
+
+    it "returns input unchanged for width < 1" do
+      Foundation.wrap("foobar\n ", 0).should eq("foobar\n ")
+      Foundation.wrap("foobar", -1).should eq("foobar")
+    end
+
+    it "passes through input that fits exactly as unchanged" do
+      Foundation.wrap("hello world", 11).should eq("hello world")
+    end
+
+    it "wraps on default breakpoint boundaries" do
+      Foundation.wrap("foo bar baz", 4).should eq("foo\nbar\nbaz")
+      Foundation.wrap("foo-bar-bizbaz", 3).should eq("foo-\nbar-\nbiz\nbaz")
+    end
+
+    it "hard-breaks tokens longer than the width" do
+      Foundation.wrap("foobarbaz", 4).should eq("foob\narba\nz")
+    end
+
+    it "hard-breaks when no configured breakpoint is available" do
+      Foundation.wrap("foobarba/z", 4, ",.-; ").should eq("foob\narba\n/z")
+    end
+
+    it "preserves source and consecutive newlines" do
+      Foundation.wrap("\nfoo bar\n\n\nfoo\n", 4).should eq("\nfoo\nbar\n\n\nfoo\n")
+    end
+
+    it "gives a grapheme wider than the limit its own line" do
+      Foundation.wrap("世a", 1).should eq("世\na")
+    end
+
+    it "wraps at a tab boundary" do
+      Foundation.wrap("foo\tbar", 4).should eq("foo\nbar")
+    end
+  end
+
+  describe "grapheme geometry" do
+    it "wraps CJK chars by terminal cells" do
+      Foundation.wrap("こんにち", 7).should eq("こんに\nち")
+    end
+
+    it "does not split a combining sequence" do
+      Foundation.wrap("e\u0301e\u0301", 1).should eq("e\u0301\ne\u0301")
+    end
+
+    it "wraps complex emoji clusters without splitting" do
+      Foundation.wrap("😭💎🙌", 2).should eq("😭\n💎\n🙌")
+    end
+
+    it "does not split a ZWJ cluster" do
+      Foundation.wrap("👨‍👩‍👧a", 2).should eq("👨‍👩‍👧\na")
+    end
+  end
+
+  describe "escape token boundaries" do
+    it "treats complete CSI and OSC sequences as indivisible and zero width" do
+      sgr = "\e[31m"
+      osc = "\e]8;;https://example.com\e\\"
+
+      Foundation.wrap("ab#{sgr}cd", 2).should eq("ab#{sgr}\e[0m\n#{sgr}cd\e[0m")
+      Foundation.wrap("ab#{osc}cd", 2).should eq("ab#{osc}\e]8;;\a\n\e]8;;https://example.com\acd\e]8;;\a")
     end
   end
 end
