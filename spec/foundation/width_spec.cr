@@ -354,7 +354,57 @@ describe "#wrap" do
       osc = "\e]8;;https://example.com\e\\"
 
       Foundation.wrap("ab#{sgr}cd", 2).should eq("ab#{sgr}\e[0m\n#{sgr}cd\e[0m")
-      Foundation.wrap("ab#{osc}cd", 2).should eq("ab#{osc}\ncd")
+      Foundation.wrap("ab#{osc}cd", 2).should eq("ab#{osc}\e]8;;\a\n\e]8;;https://example.com\acd\e]8;;\a")
+    end
+  end
+
+  describe "OSC8 state boundaries" do
+    it "closes and restores a hyperlink across one inserted wrap" do
+      source_open = "\e]8;id=abc;https://example.com\e\\"
+      source_close = "\e]8;;\e\\"
+      synthetic_open = "\e]8;id=abc;https://example.com\a"
+      synthetic_close = "\e]8;;\a"
+
+      input = "#{source_open}abcd#{source_close}"
+      expected = "#{source_open}ab#{synthetic_close}\n" +
+                 "#{synthetic_open}cd#{source_close}"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "closes and restores a hyperlink across multiple wraps" do
+      source_open = "\e]8;;https://example.com\e\\"
+      source_close = "\e]8;;\e\\"
+      synthetic_open = "\e]8;;https://example.com\a"
+      synthetic_close = "\e]8;;\a"
+
+      input = "#{source_open}abcdef#{source_close}"
+      expected = "#{source_open}ab#{synthetic_close}\n" +
+                 "#{synthetic_open}cd#{synthetic_close}\n" +
+                 "#{synthetic_open}ef#{source_close}"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "preserves complete parameters and URI content during restoration" do
+      source_open = "\e]8;id=abc:foo=bar;https://example.com/a;b;c\e\\"
+      source_close = "\e]8;;\e\\"
+      synthetic_open = "\e]8;id=abc:foo=bar;https://example.com/a;b;c\a"
+      synthetic_close = "\e]8;;\a"
+
+      input = "#{source_open}ab#{source_close}"
+      expected = "#{source_open}a#{synthetic_close}\n" +
+                 "#{synthetic_open}b#{source_close}"
+
+      Foundation.wrap(input, 1).should eq(expected)
+    end
+
+    it "adds a final close when input leaves a hyperlink active" do
+      source_open = "\e]8;;https://example.com\e\\"
+
+      Foundation.wrap("#{source_open}linked", 10).should eq(
+        "#{source_open}linked\e]8;;\a"
+      )
     end
   end
 end

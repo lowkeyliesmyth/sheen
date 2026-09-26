@@ -135,6 +135,8 @@ module Foundation
       @space_width = 0
       @sgr_state = SGRState.new
       @pending_sgr = [] of String
+      @osc8_state = OSC8State.new
+      @pending_osc8 = [] of String
     end
 
     # Feed one **grapheme** cluster of visible text.
@@ -160,12 +162,14 @@ module Foundation
     def consume_escape(kind : SegmentKind, sequence : String) : Nil
       @word += sequence
       @pending_sgr << sequence if kind.sgr?
+      @pending_osc8 << sequence if kind.osc?
     end
 
     # Return the wrapped result, flushing any pending word and trailing space, and closing out active SGR state.
     def finish : String
       flush_trailing_space
       flush_word
+      close_hyperlink
       close_sgr
       @out.to_s
     end
@@ -221,6 +225,7 @@ module Foundation
       flush_space
       @out << @word
       @pending_sgr.each { |sequence| @sgr_state.apply_sequence(sequence) }
+      @pending_osc8.each { |sequence| @osc8_state.apply_sequence(sequence) }
       @line_width += @word_width
       reset_word
     end
@@ -229,7 +234,9 @@ module Foundation
     # Because it's a newline, the current line width and pending space get reset.
     private def new_line : Nil
       close_sgr
+      close_hyperlink
       @out << '\n'
+      restore_hyperlink
       restore_sgr
       @line_width = 0
       reset_space
@@ -245,11 +252,22 @@ module Foundation
       @out << @sgr_state.sequence if @sgr_state.active?
     end
 
+    # Close out the active hyperlink either before a line boundary or at the end of output.
+    private def close_hyperlink : Nil
+      @out << @osc8_state.close_sequence
+    end
+
+    # Restore an active hyperlink after a line boundary.
+    private def restore_hyperlink : Nil
+      @out << @osc8_state.sequence
+    end
+
     # Clear the pending word buffer, its accumulated width, and its uncommitted SGR sequences.
     private def reset_word : Nil
       @word = ""
       @word_width = 0
       @pending_sgr.clear
+      @pending_osc8.clear
     end
 
     # Clears the pending space buffer and its accumulated width.

@@ -325,9 +325,9 @@ module Foundation
       !color.nil? && !color.is_a?(DefaultColor)
     end
 
-    # Assess and return whether an underline state is an actively defined `Underline` or not.
+    # Assess and return whether an underline state is a defined active `Underline` style or not.
     private def active_underline? : Bool
-      @underline.try { |underline| !underline.none? } || false
+      @underline.try { |underline| !underline.in?(nil, Underline::None) } || false
     end
   end
 
