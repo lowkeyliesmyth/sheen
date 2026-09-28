@@ -158,14 +158,14 @@ module Foundation
 
     # Buffer an escape **sequence**, which attaches to the current word without affecting its width.
     #
-    # SGR state stays pending until the word containing the sequence is committed to output which means we know which line it's rendered on.
+    # SGR and OSC8 state stays pending until the word containing the sequence is committed to output which means we know which line it's rendered on.
     def consume_escape(kind : SegmentKind, sequence : String) : Nil
       @word += sequence
       @pending_sgr << sequence if kind.sgr?
       @pending_osc8 << sequence if kind.osc?
     end
 
-    # Return the wrapped result, flushing any pending word and trailing space, and closing out active SGR state.
+    # Return the wrapped result after flushing pending content and closing out active terminal state.
     def finish : String
       flush_trailing_space
       flush_word
@@ -218,7 +218,7 @@ module Foundation
       reset_space
     end
 
-    # Commit the pending word and its SGR state, preceded by any pending space, to output.
+    # Commit the pending word and its terminal state, preceded by any pending space, to output.
     private def flush_word : Nil
       return if @word.empty?
 
@@ -230,7 +230,7 @@ module Foundation
       reset_word
     end
 
-    # Close active SGR state, emit a newline, and then restore that SGR state at the start of the newline.
+    # Close active terminal state, emit a newline, and then restore that state in terminal-safe order at the start of the newline.
     # Because it's a newline, the current line width and pending space get reset.
     private def new_line : Nil
       close_sgr
@@ -262,7 +262,7 @@ module Foundation
       @out << @osc8_state.sequence
     end
 
-    # Clear the pending word buffer, its accumulated width, and its uncommitted SGR sequences.
+    # Clear the pending word buffer, its accumulated width, and its uncommitted terminal state sequences.
     private def reset_word : Nil
       @word = ""
       @word_width = 0
@@ -270,7 +270,7 @@ module Foundation
       @pending_osc8.clear
     end
 
-    # Clears the pending space buffer and its accumulated width.
+    # Clear the pending space buffer and its accumulated width.
     private def reset_space : Nil
       @space = ""
       @space_width = 0
@@ -291,10 +291,13 @@ module Foundation
     end
   end
 
-  # Wraps **string** to lines of at most **width** visible cells, preferring word boundaries and hard-breaking tokens longer than **width**. Width is measured in terminal cells over grapheme clusters.
+  # Wrap **string** to lines of at most **width** visible cells, preferring whitespace and configured breakpoints, hard-breaking longer tokens at grapheme boundaries. Width is measured in terminal cells over grapheme clusters.
   #
-  # ANSI escape sequences and OSC8 hyperlinks are preserved across breaks.
-  # A hyphen is always a breakpoint, as well as any character passed in **breakpoints**.
+  # Regular whitespace and hyphens are always a breakpoint, as well as any character passed in to **breakpoints**.
+  #
+  # ANSI escape sequences are preserved as submitted. At the end of each line SGR is reset and then any OSC8 hyperlink is closed, and on the next line the hyperlink is reopened and SGR is restored.
+  #
+  # Returns **string** unchanged if width is less than 1.
   def self.wrap(string : String, width : Int32, breakpoints : String = DEFAULT_BREAKPOINTS) : String
     return string if width < 1
 
