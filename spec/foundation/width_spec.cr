@@ -138,46 +138,17 @@ describe "#cut" do
 end
 
 describe "#wrap" do
-  it "returns the string unchanged for width < 1" do
-    Foundation.wrap("foobar\n ", 0).should eq("foobar\n ")
-  end
-
-  it "passes through content that fits" do
-    Foundation.wrap("hello world", 11).should eq("hello world")
-  end
-
-  it "wraps on word boundaries" do
-    Foundation.wrap("foo bar baz", 4).should eq("foo\nbar\nbaz")
-  end
-
-  it "hard-breaks tokens longer than the width" do
-    Foundation.wrap("foobarbaz", 4).should eq("foob\narba\nz")
-  end
-
-  it "breaks long words mixed with spaces" do
-    Foundation.wrap("foo bars foobars", 4).should eq("foo\nbars\nfoob\nars")
-  end
-
-  it "treats hyphens as break points" do
-    Foundation.wrap("a-good-callofduty-cheat-code", 10).should eq("a-good-\ncallofduty-\ncheat-code")
-  end
-
-  it "wraps CJK by cells" do
-    Foundation.wrap("こんにち", 7).should eq("こんに\nち")
-  end
-
-  it "wraps complex emoji clusters" do
-    Foundation.wrap("😭💎🙌", 2).should eq("😭\n💎\n🙌")
-  end
-
   it "keeps styles attached to their words across breaks" do
     input = "I really \e[38;2;249;38;114mlove\e[0m pancakes!"
     Foundation.wrap(input, 8).should eq("I really\n\e[38;2;249;38;114mlove\e[0m\npancakes\n!")
   end
 
   it "treats a non-breaking space as part of a word" do
-    input = "\e[38;2;249;38;114ma really\u00A0long string\e[0m"
-    expected = "\e[38;2;249;38;114ma\nreally\u00A0lon\ng string\e[0m"
+    color = "\e[38;2;249;38;114m"
+    input = "#{color}a really\u00A0long string\e[0m"
+    expected = "#{color}a\e[0m\n" +
+               "#{color}really\u00A0lon\e[0m\n" +
+               "#{color}g string\e[0m"
     Foundation.wrap(input, 10).should eq(expected)
   end
 
@@ -189,11 +160,376 @@ describe "#wrap" do
     Foundation.wrap("\e[mfoo \e[m", 3).should eq("\e[mfoo\e[m")
   end
 
-  it "preserves explicit line breaks" do
-    Foundation.wrap("\nfoo bar\n\n\nfoo\n", 4).should eq("\nfoo\nbar\n\n\nfoo\n")
+  it "still honors default breakpoints when custom breakpoints are provided" do
+    Foundation.wrap("foo-bar-baz", 4, ",").should eq("foo-\nbar-\nbaz")
   end
 
-  it "wraps at a tab boundary" do
-    Foundation.wrap("foo\tbar", 3).should eq("foo\nbar")
+  describe "SGR state boundaries" do
+    it "closes and restores active state across one injected wrap" do
+      input = "\e[31mabcd\e[0m"
+      expected = "\e[31mab\e[0m\n\e[31mcd\e[0m"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "handles underline-only state across a wrap" do
+      input = "\e[4mab\e[24m"
+      expected = "\e[4ma\e[0m\n\e[4mb\e[24m"
+
+      Foundation.wrap(input, 1).should eq(expected)
+    end
+
+    it "closes and restores active state across multiple injected wraps" do
+      input = "\e[31mabcdef\e[0m"
+      expected = "\e[31mab\e[0m\n" +
+                 "\e[31mcd\e[0m\n" +
+                 "\e[31mef\e[0m"
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "balances active state across consecutive input newlines" do
+      input = "\e[31ma\n\nb\e[0m"
+      expected = "\e[31ma\e[0m\n" +
+                 "\e[31m\e[0m\n" +
+                 "\e[31mb\e[0m"
+      Foundation.wrap(input, 10).should eq(expected)
+    end
+
+    it "does not leak buffered SGR state to the previous line" do
+      input = "aa \e[31mbb"
+      expected = "aa\n\e[31mbb\e[0m"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "adds a closing reset when input leaves SGR state active" do
+      Foundation.wrap("\e[31mred", 10).should eq("\e[31mred\e[0m")
+    end
+
+    it "does not add a reset if source input clears out SGR state" do
+      input = "\e[31mred\e[0m"
+      Foundation.wrap(input, 10).should eq(input)
+    end
+
+    it "restores every active bool attribute" do
+      input = "\e[1;2;3;5;7;9mab\e[0m"
+      expected = "\e[1;2;3;5;7;9ma\e[0m\n" +
+                 "\e[1;2;3;5;7;9mb\e[0m"
+
+      Foundation.wrap(input, 1).should eq(expected)
+    end
+
+    it "does not restore state when cleared by a full reset" do
+      input = "\e[1;31ma\e[0mbc"
+      expected = "\e[1;31ma\e[0mb\nc"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "does not restore attributes that were closed by a selective reset" do
+      input = "\e[1;3;31mab\e[23mcd\e[0m"
+      expected = "\e[1;3;31mab\e[23m\e[0m\n" +
+                 "\e[1;31mcd\e[0m"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "restores underline, fg, and bg state" do
+      style = "\e[3;4;38;5;63;48;2;1;2;3m"
+      input = "#{style}ab\e[0m"
+      expected = "#{style}a\e[0m\n#{style}b\e[0m"
+      Foundation.wrap(input, 1).should eq(expected)
+    end
+
+    it "does not restore underline after a selective underline reset" do
+      input = "\e[4:3;31mab\e[24mcd"
+      expected = "\e[4:3;31mab\e[24m\e[0m\n" +
+                 "\e[31mcd\e[0m"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "restores an intermediate replacement style applied before the boundary" do
+      input = "\e[31mab\e[34mcd\e[0m"
+      expected = "\e[31mab\e[34m\e[0m\n" +
+                 "\e[34mcd\e[0m"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "restores committed state before applying its replacement style on the next line" do
+      input = "\e[31mab \e[34mcd\e[0m"
+      expected = "\e[31mab\e[0m\n" +
+                 "\e[31m\e[34mcd\e[0m"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "restores background state if fg returns to default" do
+      input = "\e[31;44mab\e[39mcd"
+      expected = "\e[31;44mab\e[39m\e[0m\n" +
+                 "\e[44mcd\e[0m"
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "keeps a styled breakpoint on its source line" do
+      input = "\e[31mab-cd\e[0m"
+      expected = "\e[31mab-\e[0m\n" +
+                 "\e[31mcd\e[0m"
+
+      Foundation.wrap(input, 3).should eq(expected)
+    end
+  end
+
+  describe "OSC8 state boundaries" do
+    it "closes and restores a hyperlink across one inserted wrap" do
+      source_open = "\e]8;id=abc;https://example.com\e\\"
+      source_close = "\e]8;;\e\\"
+      synthetic_open = "\e]8;id=abc;https://example.com\a"
+      synthetic_close = "\e]8;;\a"
+
+      input = "#{source_open}abcd#{source_close}"
+      expected = "#{source_open}ab#{synthetic_close}\n" +
+                 "#{synthetic_open}cd#{source_close}"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "closes and restores a hyperlink across multiple wraps" do
+      source_open = "\e]8;;https://example.com\e\\"
+      source_close = "\e]8;;\e\\"
+      synthetic_open = "\e]8;;https://example.com\a"
+      synthetic_close = "\e]8;;\a"
+
+      input = "#{source_open}abcdef#{source_close}"
+      expected = "#{source_open}ab#{synthetic_close}\n" +
+                 "#{synthetic_open}cd#{synthetic_close}\n" +
+                 "#{synthetic_open}ef#{source_close}"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "preserves complete parameters and URI content during restoration" do
+      source_open = "\e]8;id=abc:foo=bar;https://example.com/a;b;c\e\\"
+      source_close = "\e]8;;\e\\"
+      synthetic_open = "\e]8;id=abc:foo=bar;https://example.com/a;b;c\a"
+      synthetic_close = "\e]8;;\a"
+
+      input = "#{source_open}ab#{source_close}"
+      expected = "#{source_open}a#{synthetic_close}\n" +
+                 "#{synthetic_open}b#{source_close}"
+
+      Foundation.wrap(input, 1).should eq(expected)
+    end
+
+    it "adds a final close when input leaves a hyperlink active" do
+      source_open = "\e]8;;https://example.com\e\\"
+
+      Foundation.wrap("#{source_open}linked", 10).should eq(
+        "#{source_open}linked\e]8;;\a"
+      )
+    end
+
+    it "handles active hyperlink across consecutive newlines" do
+      source_open = "\e]8;;https://example.com\e\\"
+      source_close = "\e]8;;\e\\"
+      synthetic_open = "\e]8;;https://example.com\a"
+      synthetic_close = "\e]8;;\a"
+
+      input = "#{source_open}a\n\nb#{source_close}"
+      expected = "#{source_open}a#{synthetic_close}\n" \
+                 "#{synthetic_open}#{synthetic_close}\n" \
+                 "#{synthetic_open}b#{source_close}"
+
+      Foundation.wrap(input, 10).should eq(expected)
+    end
+
+    it "restores the committed link before applying its replacement on the next line" do
+      first = "\e]8;id=one;https://example.com/one\e\\"
+      second = "\e]8;id=two;https://example.com/two\e\\"
+      source_close = "\e]8;;\e\\"
+      synthetic_first = "\e]8;id=one;https://example.com/one\a"
+      synthetic_close = "\e]8;;\a"
+
+      input = "#{first}ab #{second}cd#{source_close}"
+      expected = "#{first}ab#{synthetic_close}\n" \
+                 "#{synthetic_first}#{second}cd#{source_close}"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "preserves a trailing OSC 8 sequence and closes its resulting state" do
+      source_open = "\e]8;;https://example.com\e\\"
+
+      Foundation.wrap("ab#{source_open}", 10).should eq(
+        "ab#{source_open}\e]8;;\a"
+      )
+    end
+
+    it "does not interpret another OSC command as hyperlink state" do
+      set_title = "\e]0;Example title\a"
+
+      Foundation.wrap("ab#{set_title}cd", 2).should eq(
+        "ab#{set_title}\ncd"
+      )
+    end
+  end
+
+  describe "combined SGR and OSC8 state" do
+    it "closes and restores both states in safe order" do
+      style = "\e[1;31m"
+      source_open = "\e]8;id=abc;https://example.com\e\\"
+      source_close = "\e]8;;\e\\"
+      synthetic_open = "\e]8;id=abc;https://example.com\a"
+      synthetic_close = "\e]8;;\a"
+
+      input = "#{style}#{source_open}abcd#{source_close}\e[0m"
+      expected = "#{style}#{source_open}ab\e[0m#{synthetic_close}\n" +
+                 "#{synthetic_open}#{style}cd#{source_close}\e[0m"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "preserves combined ordering across multiple wraps" do
+      style = "\e[1;31m"
+      source_open = "\e]8;;https://example.com\e\\"
+      source_close = "\e]8;;\e\\"
+      synthetic_open = "\e]8;;https://example.com\a"
+      synthetic_close = "\e]8;;\a"
+
+      input = "#{style}#{source_open}abcdef#{source_close}\e[0m"
+      expected = "#{style}#{source_open}ab\e[0m#{synthetic_close}\n" +
+                 "#{synthetic_open}#{style}cd\e[0m#{synthetic_close}\n" +
+                 "#{synthetic_open}#{style}ef#{source_close}\e[0m"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "handles consistent ordering around source newlines" do
+      style = "\e[1;31m"
+      source_open = "\e]8;;https://example.com\e\\"
+      source_close = "\e]8;;\e\\"
+      synthetic_open = "\e]8;;https://example.com\a"
+      synthetic_close = "\e]8;;\a"
+
+      input = "#{style}#{source_open}a\nb#{source_close}\e[0m"
+      expected = "#{style}#{source_open}a\e[0m#{synthetic_close}\n" +
+                 "#{synthetic_open}#{style}b#{source_close}\e[0m"
+
+      Foundation.wrap(input, 10).should eq(expected)
+    end
+
+    it "closes hyperlinks before resetting SGR" do
+      style = "\e[1;31m"
+      source_open = "\e]8;;https://example.com\e\\"
+
+      input = "#{style}#{source_open}linked"
+      expected = "#{style}#{source_open}linked\e]8;;\a\e[0m"
+
+      Foundation.wrap(input, 10).should eq(expected)
+    end
+
+    it "updates SGR and OSC8 hyperlink state independently" do
+      red = "\e[31m"
+      blue = "\e[34m"
+      first = "\e]8;id=one;https://example.com/one\e\\"
+      second = "\e]8;id=two;https://example.com/two\e\\"
+      source_close = "\e]8;;\e\\"
+      synthetic_first = "\e]8;id=one;https://example.com/one\a"
+      synthetic_second = "\e]8;id=two;https://example.com/two\a"
+      synthetic_close = "\e]8;;\a"
+
+      input = "#{red}#{first}ab\e[0mcd#{blue}#{second}ef#{source_close}gh\e[0m"
+      expected = "#{red}#{first}ab\e[0m#{synthetic_close}\n" +
+                 "#{synthetic_first}cd#{blue}#{second}\e[0m#{synthetic_close}\n" +
+                 "#{synthetic_second}#{blue}ef#{source_close}\e[0m\n" +
+                 "#{blue}gh\e[0m"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+  end
+
+  describe "user provided breakpoints" do
+    breakpoints = ",.-; "
+
+    it "wraps after each configured punctuation breakpoint" do
+      Foundation.wrap("foo,bar", 4, breakpoints).should eq("foo,\nbar")
+      Foundation.wrap("foo.bar", 4, breakpoints).should eq("foo.\nbar")
+      Foundation.wrap("foo-bar", 4, breakpoints).should eq("foo-\nbar")
+      Foundation.wrap("foo;bar", 4, breakpoints).should eq("foo;\nbar")
+      Foundation.wrap("foo bar", 4, breakpoints).should eq("foo\nbar")
+    end
+
+    it "keeps a breakpoint after an exact width word" do
+      Foundation.wrap("four,bar", 4, breakpoints).should eq("four,\nbar")
+    end
+  end
+
+  describe "boundary behavior" do
+    it "returns empty input unchanged" do
+      Foundation.wrap("", 4).should eq("")
+    end
+
+    it "returns input unchanged for width < 1" do
+      Foundation.wrap("foobar\n ", 0).should eq("foobar\n ")
+      Foundation.wrap("foobar", -1).should eq("foobar")
+    end
+
+    it "passes through input that fits exactly as unchanged" do
+      Foundation.wrap("hello world", 11).should eq("hello world")
+    end
+
+    it "wraps on default breakpoint boundaries" do
+      Foundation.wrap("foo bar baz", 4).should eq("foo\nbar\nbaz")
+      Foundation.wrap("foo-bar-bizbaz", 3).should eq("foo-\nbar-\nbiz\nbaz")
+    end
+
+    it "hard-breaks tokens longer than the width" do
+      Foundation.wrap("foobarbaz", 4).should eq("foob\narba\nz")
+    end
+
+    it "hard-breaks when no configured breakpoint is available" do
+      Foundation.wrap("foobarba/z", 4, ",.-; ").should eq("foob\narba\n/z")
+    end
+
+    it "preserves source and consecutive newlines" do
+      Foundation.wrap("\nfoo bar\n\n\nfoo\n", 4).should eq("\nfoo\nbar\n\n\nfoo\n")
+    end
+
+    it "gives a grapheme wider than the limit its own line" do
+      Foundation.wrap("世a", 1).should eq("世\na")
+    end
+
+    it "wraps at a tab boundary" do
+      Foundation.wrap("foo\tbar", 4).should eq("foo\nbar")
+    end
+  end
+
+  describe "grapheme geometry" do
+    it "wraps CJK chars by terminal cells" do
+      Foundation.wrap("こんにち", 7).should eq("こんに\nち")
+    end
+
+    it "does not split a combining sequence" do
+      Foundation.wrap("e\u0301e\u0301", 1).should eq("e\u0301\ne\u0301")
+    end
+
+    it "wraps complex emoji clusters without splitting" do
+      Foundation.wrap("😭💎🙌", 2).should eq("😭\n💎\n🙌")
+    end
+
+    it "does not split a ZWJ cluster" do
+      Foundation.wrap("👨‍👩‍👧a", 2).should eq("👨‍👩‍👧\na")
+    end
+  end
+
+  describe "escape token boundaries" do
+    it "treats complete CSI and OSC sequences as indivisible and zero width" do
+      sgr = "\e[31m"
+      osc = "\e]8;;https://example.com\e\\"
+
+      Foundation.wrap("ab#{sgr}cd", 2).should eq("ab#{sgr}\e[0m\n#{sgr}cd\e[0m")
+      Foundation.wrap("ab#{osc}cd", 2).should eq("ab#{osc}\e]8;;\a\n\e]8;;https://example.com\acd\e]8;;\a")
+    end
   end
 end

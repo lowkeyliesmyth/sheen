@@ -105,6 +105,10 @@ describe "#parse_sgr" do
       Foundation.parse_sgr("\e[39m").fg.should eq(Foundation::DefaultColor.new)
       Foundation.parse_sgr("\e[49m").bg.should eq(Foundation::DefaultColor.new)
     end
+
+    it "reconstructs a bright basic background" do
+      Foundation.parse_sgr("\e[101m").bg.should eq(Foundation::BasicColor.new(9_u8))
+    end
   end
 
   describe "extended color grouping" do
@@ -122,6 +126,14 @@ describe "#parse_sgr" do
 
     it "groups a truecolor background" do
       Foundation.parse_sgr("\e[48;2;255;0;170m").bg.should eq(Foundation::RGBColor.new(255_u8, 0_u8, 170_u8))
+    end
+
+    it "resumes reading SGR codes after completing extended colors" do
+      attrs = Foundation.parse_sgr("\e[38;5;63;1;48;2;1;2;3;4m")
+      attrs.fg.should eq(Foundation::IndexedColor.new(63_u8))
+      attrs.bg.should eq(Foundation::RGBColor.new(1_u8, 2_u8, 3_u8))
+      attrs.flags.should eq(Foundation::SGRFlags::Bold)
+      attrs.underline.should eq(Foundation::Underline::Single)
     end
   end
 
@@ -146,13 +158,61 @@ describe "#parse_sgr" do
     attrs.underline.should eq(Foundation::Underline::Single)
   end
 
+  describe "resets and selectively clears" do
+    it "treats an empty parameter list as a reset" do
+      Foundation.parse_sgr("\e[1;31m\e[m").should eq(FA.new(reset: true))
+    end
+
+    it "clears each set attribute with its matching 'off' code" do
+      Foundation.parse_sgr("\e[1;2;3;4;5;7;9m\e[22;23;24;25;27;29m").should eq(FA.new)
+    end
+
+    it "clears only the attribute that its equivalent off code targets" do
+      attrs = Foundation.parse_sgr("\e[1;3;4m\e[23m")
+      attrs.flags.should eq(Foundation::SGRFlags::Bold)
+      attrs.underline.should eq(Foundation::Underline::Single)
+    end
+  end
+
   describe "unknown parameters" do
-    it "preserves an unmodeled code verbatim" do
+    it "preserves an unknown SGR code as-is" do
       Foundation.parse_sgr("\e[53m").unknown.should eq(["53"])
+    end
+
+    it "preserves an unrecognized underline substyle as-is" do
+      attrs = Foundation.parse_sgr("\e[4:9m")
+      attrs.underline.should be_nil
+      attrs.unknown.should eq(["4:9"])
+    end
+
+    it "preserves a malformed extended color with colons as-is" do
+      attrs = Foundation.parse_sgr("\e[38:5:63m")
+      attrs.fg.should be_nil
+      attrs.unknown.should eq(["38:5:63"])
+    end
+
+    it "keeps an unused extended color subtype from accidentally resetting accrued SGR state" do
+      attrs = Foundation.parse_sgr("\e[1;38;0m")
+      attrs.flags.bold?.should be_true
+      attrs.reset.should be_false
+      attrs.unknown.should eq(["38;0"])
     end
   end
 
   describe "malformed sequences do not raise" do
+    it "tolerates an extended color introducer with no subtokens" do
+      Foundation.parse_sgr("\e[1;38m").unknown.should eq(["38"])
+    end
+
+    # This is the lesser of two weevils, see `SGRState#apply_extended_color` comment for more details.
+    # Basically a malformed extended foreground color missing the SGR token representing the IndexedColor to set the foreground to has its "5" subtoken mistakenly applied as "enable blink".
+    it "re-reads a malformed extended color's subtokens as ordinary SGR codes" do
+      attrs = Foundation.parse_sgr("\e[38;5m")
+      attrs.fg.should be_nil
+      attrs.flags.blink?.should be_true
+      attrs.unknown.should eq(["38"])
+    end
+
     it "tolerates a sequence with no terminator" do
       Foundation.parse_sgr("\e[1").should eq(FA.new)
     end
@@ -188,42 +248,128 @@ describe "Attributes round-trip" do
     Foundation.parse_sgr(attrs.to_s).should eq(attrs)
   end
 
-  it "collapses a duped attribute to its canonical form" do
+  it "is stable when folding in multiple unknown parameters" do
+    attrs = Foundation.parse_sgr("\e[38m\e[53m")
+    attrs.unknown.should eq(["38", "53"])
+  end
+
+  it "collapses a duped attribute to last-applied" do
     Foundation.parse_sgr("\e[1;1m").to_s.should eq("\e[1m")
   end
 end
 
 describe "#each_segment" do
   it "splits text and SGR sequences in order" do
-    segs = [] of {Foundation::SegmentKind, String}
-    Foundation.each_segment("\e[1mhi\e[0m") { |kind, content| segs << {kind, content} }
-    segs.should eq([
+    segments = [] of {Foundation::SegmentKind, String}
+    Foundation.each_segment("\e[1mhi\e[0m") do |kind, content|
+      segments << {kind, content}
+    end
+
+    segments.should eq([
       {Foundation::SegmentKind::Sgr, "\e[1m"},
       {Foundation::SegmentKind::Text, "hi"},
       {Foundation::SegmentKind::Sgr, "\e[0m"},
     ])
   end
 
-  it "classifies an OSC hyperlink as Osc" do
-    kinds = [] of Foundation::SegmentKind
-    Foundation.each_segment("\e]8;;http://example.com\e\\link\e]8;;\e\\") { |kind, _c| kinds << kind }
+  it "keeps a complete CSI sequence as an atomic unit" do
+    segments = [] of {Foundation::SegmentKind, String}
+
+    Foundation.each_segment("a\e[38;2;255;0;170mb") do |kind, content|
+      segments << {kind, content}
+    end
+
+    segments.should eq([
+      {Foundation::SegmentKind::Text, "a"},
+      {Foundation::SegmentKind::Sgr, "\e[38;2;255;0;170m"},
+      {Foundation::SegmentKind::Text, "b"},
+    ])
+  end
+
+  it "keeps an unterminated CSI and its remaining bytes as an atomic unit" do
+    segments = [] of {Foundation::SegmentKind, String}
+
+    Foundation.each_segment("a\e[31;2;255") do |kind, content|
+      segments << {kind, content}
+    end
+    segments.should eq([
+      {Foundation::SegmentKind::Text, "a"},
+      {Foundation::SegmentKind::Escape, "\e[31;2;255"},
+    ])
+  end
+
+  it "ends an interrupted CSI at the next ESC so the following sequence stays intact" do
+    segments = [] of {Foundation::SegmentKind, String}
+
+    Foundation.each_segment("a\e[31\e[0mb") do |kind, content|
+      segments << {kind, content}
+    end
+
+    segments.should eq([
+      {Foundation::SegmentKind::Text, "a"},
+      {Foundation::SegmentKind::Escape, "\e[31"},
+      {Foundation::SegmentKind::Sgr, "\e[0m"},
+      {Foundation::SegmentKind::Text, "b"},
+    ])
+  end
+
+  it "classifies an atomic OSC hyperlink unit as OSC" do
+    kinds = [] of {Foundation::SegmentKind, String}
+    Foundation.each_segment("\e]8;;http://example.com\e\\link\e]8;;\e\\") do |kind, content|
+      kinds << {kind, content}
+    end
+
     kinds.should eq([
-      Foundation::SegmentKind::Osc,
-      Foundation::SegmentKind::Text,
-      Foundation::SegmentKind::Osc,
+      {Foundation::SegmentKind::Osc, "\e]8;;http://example.com\e\\"},
+      {Foundation::SegmentKind::Text, "link"},
+      {Foundation::SegmentKind::Osc, "\e]8;;\e\\"},
+    ])
+  end
+
+  it "keeps an unterminated OSC and its remaining bytes as an atomic unit" do
+    segments = [] of {Foundation::SegmentKind, String}
+
+    Foundation.each_segment("a\e]8;;https://example.com;broken") do |kind, content|
+      segments << {kind, content}
+    end
+
+    segments.should eq([
+      {Foundation::SegmentKind::Text, "a"},
+      {Foundation::SegmentKind::Escape, "\e]8;;https://example.com;broken"},
+    ])
+  end
+
+  it "ends an interrupted OSC at the next non-ST ESC so the following sequence stays intact" do
+    segments = [] of {Foundation::SegmentKind, String}
+
+    Foundation.each_segment("a\e]8;;https://example.com\e[1mbold") do |kind, content|
+      segments << {kind, content}
+    end
+
+    segments.should eq([
+      {Foundation::SegmentKind::Text, "a"},
+      {Foundation::SegmentKind::Escape, "\e]8;;https://example.com"},
+      {Foundation::SegmentKind::Sgr, "\e[1m"},
+      {Foundation::SegmentKind::Text, "bold"},
     ])
   end
 
   it "classifies a non-SGR CSI sequence as Escape" do
     kinds = [] of Foundation::SegmentKind
-    Foundation.each_segment("\e[2Jtext") { |kind, _c| kinds << kind }
+    Foundation.each_segment("\e[2Jtext") do |kind, _c|
+      kinds << kind
+    end
+
     kinds.first.should eq(Foundation::SegmentKind::Escape)
   end
 
   it "yields a single text segment for plain context" do
-    segs = [] of {Foundation::SegmentKind, String}
-    Foundation.each_segment("hello") { |kind, content| segs << {kind, content} }
-    segs.should eq([{Foundation::SegmentKind::Text, "hello"}])
+    segments = [] of {Foundation::SegmentKind, String}
+    Foundation.each_segment("hello") do |kind, content|
+      segments << {kind, content}
+    end
+
+    segments.should eq([{Foundation::SegmentKind::Text, "hello"}])
   end
 
   it "yields nothing for an empty string" do
@@ -238,5 +384,18 @@ describe "#each_segment" do
       Foundation.each_segment(original) { |_k, content| io << content }
     end
     rebuilt.should eq(original)
+  end
+
+  it "reconstructs malformed unterminated input from segment contents" do
+    [
+      "a\e[31broken",
+      "a\e8;;https://example.com/broken",
+    ].each do |orig|
+      rebuilt = String.build do |io|
+        Foundation.each_segment(orig) { |_kind, content| io << content }
+      end
+
+      rebuilt.should eq(orig)
+    end
   end
 end
