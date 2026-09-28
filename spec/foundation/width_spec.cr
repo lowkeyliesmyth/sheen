@@ -172,6 +172,13 @@ describe "#wrap" do
       Foundation.wrap(input, 2).should eq(expected)
     end
 
+    it "handles underline-only state across a wrap" do
+      input = "\e[4mab\e[24m"
+      expected = "\e[4ma\e[0m\n\e[4mb\e[24m"
+
+      Foundation.wrap(input, 1).should eq(expected)
+    end
+
     it "closes and restores active state across multiple injected wraps" do
       input = "\e[31mabcdef\e[0m"
       expected = "\e[31mab\e[0m\n" +
