@@ -368,6 +368,80 @@ describe "#wrap" do
     end
   end
 
+  describe "combined SGR and OSC8 state" do
+    it "closes and restores both states in safe order" do
+      style = "\e[1;31m"
+      source_open = "\e]8;id=abc;https://example.com\e\\"
+      source_close = "\e]8;;\e\\"
+      synthetic_open = "\e]8;id=abc;https://example.com\a"
+      synthetic_close = "\e]8;;\a"
+
+      input = "#{style}#{source_open}abcd#{source_close}\e[0m"
+      expected = "#{style}#{source_open}ab\e[0m#{synthetic_close}\n" +
+                 "#{synthetic_open}#{style}cd#{source_close}\e[0m"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "preserves combined ordering across multiple wraps" do
+      style = "\e[1;31m"
+      source_open = "\e]8;;https://example.com\e\\"
+      source_close = "\e]8;;\e\\"
+      synthetic_open = "\e]8;;https://example.com\a"
+      synthetic_close = "\e]8;;\a"
+
+      input = "#{style}#{source_open}abcdef#{source_close}\e[0m"
+      expected = "#{style}#{source_open}ab\e[0m#{synthetic_close}\n" +
+                 "#{synthetic_open}#{style}cd\e[0m#{synthetic_close}\n" +
+                 "#{synthetic_open}#{style}ef#{source_close}\e[0m"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+
+    it "handles consistent ordering around source newlines" do
+      style = "\e[1;31m"
+      source_open = "\e]8;;https://example.com\e\\"
+      source_close = "\e]8;;\e\\"
+      synthetic_open = "\e]8;;https://example.com\a"
+      synthetic_close = "\e]8;;\a"
+
+      input = "#{style}#{source_open}a\nb#{source_close}\e[0m"
+      expected = "#{style}#{source_open}a\e[0m#{synthetic_close}\n" +
+                 "#{synthetic_open}#{style}b#{source_close}\e[0m"
+
+      Foundation.wrap(input, 10).should eq(expected)
+    end
+
+    it "closes hyperlinks before resetting SGR" do
+      style = "\e[1;31m"
+      source_open = "\e]8;;https://example.com\e\\"
+
+      input = "#{style}#{source_open}linked"
+      expected = "#{style}#{source_open}linked\e]8;;\a\e[0m"
+
+      Foundation.wrap(input, 10).should eq(expected)
+    end
+
+    it "updates SGR and OSC8 hyperlink state independently" do
+      red = "\e[31m"
+      blue = "\e[34m"
+      first = "\e]8;id=one;https://example.com/one\e\\"
+      second = "\e]8;id=two;https://example.com/two\e\\"
+      source_close = "\e]8;;\e\\"
+      synthetic_first = "\e]8;id=one;https://example.com/one\a"
+      synthetic_second = "\e]8;id=two;https://example.com/two\a"
+      synthetic_close = "\e]8;;\a"
+
+      input = "#{red}#{first}ab\e[0mcd#{blue}#{second}ef#{source_close}gh\e[0m"
+      expected = "#{red}#{first}ab\e[0m#{synthetic_close}\n" +
+                 "#{synthetic_first}cd#{blue}#{second}\e[0m#{synthetic_close}\n" +
+                 "#{synthetic_second}#{blue}ef#{source_close}\e[0m\n" +
+                 "#{blue}gh\e[0m"
+
+      Foundation.wrap(input, 2).should eq(expected)
+    end
+  end
+
   describe "user provided breakpoints" do
     breakpoints = ",.-; "
 
