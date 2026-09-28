@@ -1,3 +1,18 @@
+## v0.1.4 (2026-09-28)
+
+### Bug Fixes
+
+- **foundation-wrapper**: make ANSI wrapping state safe (#19)
+
+### Build System
+
+- alphasort taskfile, update pre-commit hook
+- **ameba**: update ameba linter to 1.7.0 release with updated configs
+
+### CI
+
+- **gha**: align crystal version on 1.21.0 and fix release tag
+
 ## v0.1.3 (2026-08-08)
 
 ### Bug Fixes
